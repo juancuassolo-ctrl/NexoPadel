@@ -44,9 +44,11 @@ dialog form,.col{display:grid;gap:12px;margin-top:12px}label{display:grid;gap:6p
 .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin-top:12px}.kv span{color:var(--muted)}.kv b{font-weight:500;text-align:right}
 .login{max-width:320px;margin:14vh auto;display:grid;gap:10px}.login h1{font-size:24px}
 @media(max-width:760px){body{display:block}aside{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px;border:0;border-bottom:1px solid var(--border)}.brand,.who{display:none}aside a{flex:none}main{padding:16px}}
+dialog{max-height:90vh;overflow:auto}
 </style></head><body>
 <aside id="side"></aside><main id="v"></main><dialog id="d"></dialog>
 <script src="../config.js"></script>
+<script src="../torneos.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const{SB_URL,SB_KEY}=window.CFG,sb=supabase.createClient(SB_URL,SB_KEY),$=s=>document.querySelector(s),TZ="America/Argentina/Cordoba";
@@ -64,7 +66,7 @@ const ES=["reservado","senado","jugando","terminado","cobrado"],EL={reservado:"R
 const CAT={sena:"Seña de turno",turno:"Cobro de turno",producto:"Venta de producto",compra_stock:"Compra de stock",gasto:"Gasto",insumos:"Insumos",sueldo:"Sueldo",retiro:"Retiro",otro:"Otro"};
 const pill=e=>`<span class="pill ${e}">${EL[e]}</span>`;
 async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message);return null}return r}
-const NAV=[["agenda","Agenda"],["turnos","Turnos"],["clientes","Clientes"],["caja","Caja"],["stock","Stock"],["ajustes","Ajustes"]];
+const NAV=[["agenda","Agenda"],["turnos","Turnos"],["clientes","Clientes"],["caja","Caja"],["stock","Stock"],["torneos","Torneos"],["ajustes","Ajustes"]];
 let CF,K=[],C=[],P=[],R=[],ST={tab:"agenda",dia:hoy(),est:"todos",q:""},who="";
 (async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session):login()})();
 function login(msg){$("#side").innerHTML="";$("#v").innerHTML=`<form class="login" id="lf"><h1>Nexo Pádel</h1><span class="sub">Gestión · acceso privado</span>
@@ -76,7 +78,7 @@ async function load(){const r=await Promise.all([q(sb.from("config").select("*")
 async function render(){
  $("#side").innerHTML=`<div class="brand"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--accent)"/><path d="M3.5 8.5c5.5 0 9.5 4 9.5 11.5M20.5 15.5C15 15.5 11 11.5 11 4" stroke="#fff" fill="none" stroke-width="1.6"/></svg><div><b>${esc(CF.nombre)}</b><span>Gestión</span></div></div>`+
   NAV.map(n=>`<a data-act="nav" data-id="${n[0]}" class="${ST.tab===n[0]?"on":""}">${n[1]}${n[0]==="stock"&&P.some(p=>p.stock<=p.stock_minimo)?`<i>${P.filter(p=>p.stock<=p.stock_minimo).length} bajo</i>`:""}</a>`).join("")+`<div class="who">${esc(who)}<br><button data-act="out">Salir</button></div>`;
- $("#v").innerHTML=await({agenda:vAgenda,turnos:vTurnos,clientes:vClientes,caja:vCaja,stock:vStock,ajustes:vAjustes})[ST.tab]()}
+ $("#v").innerHTML=await({agenda:vAgenda,turnos:vTurnos,clientes:vClientes,caja:vCaja,stock:vStock,torneos:vTorneos,ajustes:vAjustes})[ST.tab]()}
 const head=(t,s,x)=>`<div class="head"><div><h1>${t}</h1><div class="sub">${s||""}</div></div><div class="row">${x||""}</div></div>`;
 const dayNav=()=>`<button data-act="dia" data-id="0">Hoy</button><button data-act="dia" data-id="1">Mañana</button><input type="date" id="fd" value="${ST.dia}" aria-label="Día">`;
 const dLong=()=>new Date(ST.dia+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
@@ -198,4 +200,79 @@ document.addEventListener("input",e=>{if(e.target.id==="sq"){ST.q=e.target.value
 document.addEventListener("submit",async e=>{if(e.target.id!=="cf")return;e.preventDefault();const f=e.target,
  o={nombre:f.nombre.value,apertura:+f.apertura.value,cierre:+f.cierre.value,duracion:+f.duracion.value,precio:+f.precio.value,dias_adelante:+f.dias_adelante.value};
  if(o.cierre<=o.apertura)return alert("El cierre debe ser posterior a la apertura");if(await q(sb.from("config").update(o).eq("id",1))){alert("Guardado");load()}});
+
+/* ---------- TORNEOS ---------- */
+const CATS=["8va","7ma","6ta","5ta","4ta","3ra","2da","1ra"],SUMAS=Array.from({length:13},(_,i)=>"suma "+(15-i));
+const GEN={masculino:"Masculino",femenino:"Femenino",mixto:"Mixto"},TE={borrador:"Borrador",inscripcion:"Inscripción abierta",en_juego:"En juego",finalizado:"Finalizado"},TEP={borrador:"",inscripcion:"senado",en_juego:"jugando",finalizado:"cobrado"};
+const RNB={2:"la final",4:"semifinales",8:"cuartos",16:"octavos",32:"16avos",64:"32avos"};
+let TO=[],TP=[],TM=[];
+const lt=i=>String.fromCharCode(64+i),pw=n=>{let b=2;while(b<n)b*=2;return b},bo=n=>n===1?[1]:bo(n/2).flatMap(x=>[x,n+1-x]);
+const fmtT=t=>t.grupos?`${t.cant_parejas} parejas · ${t.grupos} grupos · pasan ${t.clasifican} por grupo · cruces desde ${RNB[pw(t.grupos*t.clasifican)]}`:`${t.cant_parejas} parejas · eliminación directa`;
+async function vTorneos(){
+ const r=await q(sb.from("torneos").select("*").order("created_at",{ascending:false}));TO=r?.data||[];const t=ST.tid&&TO.find(x=>x.id===ST.tid);
+ if(!t){ST.tid=null;return head("Torneos",TO.length+" cargados",`<button class="p" data-act="tnew">Nuevo torneo</button>`)+(TO.length?`<div class="w"><table><tr><th>Torneo</th><th>Formato</th><th>Estado</th><th>En el turnero</th><th></th></tr>${TO.map(x=>
+  `<tr><td>${esc(x.nombre)}<small>${GEN[x.genero]} · ${esc(x.categoria)}</small></td><td>${fmtT(x)}<small>partidos al mejor de ${x.sets} sets</small></td><td><span class="pill ${TEP[x.estado]}">${TE[x.estado]}</span></td><td>${x.publico?"Visible":"Oculto"}</td>
+  <td class="nw n"><button class="t" data-act="topen" data-id="${x.id}">Abrir</button><button class="t" data-act="tedit" data-id="${x.id}">Editar</button><button class="t d" data-act="tdel" data-id="${x.id}">Eliminar</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Todavía no hay torneos. Creá el primero con «Nuevo torneo».</div>`)}
+ const[a,b]=await Promise.all([q(sb.from("torneo_parejas").select("*").eq("torneo_id",t.id).order("created_at")),q(sb.from("torneo_partidos").select("*").eq("torneo_id",t.id).order("ronda").order("pos"))]);TP=a?.data||[];TM=b?.data||[];
+ const tabs=[["par","Parejas ("+TP.length+" de "+t.cant_parejas+")"],...(t.grupos?[["gru","Grupos"]]:[]),["cru","Cruces"]];if(!tabs.some(x=>x[0]===ST.tt))ST.tt="par";
+ const body=ST.tt==="par"?`<div class="row" style="margin-bottom:12px"><button data-act="pnew">Agregar pareja</button><button class="p" data-act="tsort">${TM.length?"Volver a sortear":"Sortear y generar fixture"}</button></div>`+(TP.length?`<div class="w"><table><tr><th>Pareja</th><th>Grupo</th><th></th></tr>${TP.map(p=>`<tr><td>${esc(TV.nom(p))}</td><td>${p.grupo?TV.L(p.grupo):"—"}</td><td class="nw n"><button class="t" data-act="ped" data-id="${p.id}">Editar</button><button class="t d" data-act="pdel" data-id="${p.id}">Quitar</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Cargá las parejas inscriptas y después sorteá el fixture.</div>`):
+  ST.tt==="gru"?(TM.some(m=>m.fase==="grupo")?TV.grupos(t,TP,TM,true)+`<p class="m" style="margin-top:12px">Tocá un partido para cargar resultado, estado, fecha y cancha. Victoria = 2 puntos.</p>`:`<div class="empty">Sorteá el fixture desde la pestaña Parejas.</div>`):
+  (TM.some(m=>m.fase==="llave")?(t.grupos?`<div class="row" style="margin-bottom:12px"><button class="p" data-act="tcomp">Completar cruces desde los grupos</button></div>`:"")+TV.campeon(TM,TP)+TV.llave(TM,TP,true):`<div class="empty">Sorteá el fixture desde la pestaña Parejas.</div>`);
+ return head(esc(t.nombre),`${GEN[t.genero]} · ${esc(t.categoria)} · ${fmtT(t)}`,`<span class="pill ${TEP[t.estado]}">${TE[t.estado]}</span><button data-act="tback">Todos los torneos</button><button data-act="tedit" data-id="${t.id}">Editar</button><button class="d" data-act="tdel" data-id="${t.id}">Eliminar</button>`)+
+ (t.reglas?`<div class="card"><b>Reglas</b><div style="white-space:pre-wrap;margin-top:6px">${esc(t.reglas)}</div></div>`:"")+`<div class="tabs">${tabs.map(x=>`<button data-act="ttab" data-id="${x[0]}" class="${ST.tt===x[0]?"on":""}">${x[1]}</button>`).join("")}</div><div class="tv">${body}</div>`}
+function tform(t){const v=(k,d)=>esc(t?.[k]??d),op=(o)=>`<option ${t?.categoria===o?"selected":""}>${o}</option>`;
+ dlg(t?"Editar torneo":"Nuevo torneo",`<label>Nombre<input name="n" value="${v("nombre","")}" required></label><label>Género<select name="g">${Object.entries(GEN).map(([k,l])=>`<option value="${k}" ${t?.genero===k?"selected":""}>${l}</option>`).join("")}</select></label>
+ <label>Categoría<select name="c"><optgroup label="Categorías">${CATS.map(op).join("")}</optgroup><optgroup label="Suma">${SUMAS.map(op).join("")}</optgroup></select></label>
+ <label>Cantidad de parejas<input name="np" type="number" min="2" max="64" value="${v("cant_parejas",8)}"></label><label>Grupos (0 = eliminación directa)<input name="gr" type="number" min="0" max="16" value="${v("grupos",2)}"></label>
+ <label>Parejas que pasan por grupo<input name="cl" type="number" min="1" max="8" value="${v("clasifican",2)}"></label><label>Partidos al mejor de<select name="st">${[1,3,5].map(n=>`<option value="${n}" ${(t?.sets??3)===n?"selected":""}>${n} ${n===1?"set":"sets"}</option>`).join("")}</select></label>
+ <label>Inicio<input name="fi" type="date" value="${v("fecha_inicio","")}"></label><label>Fin<input name="ff" type="date" value="${v("fecha_fin","")}"></label>
+ <label>Estado<select name="e">${Object.entries(TE).map(([k,l])=>`<option value="${k}" ${(t?.estado||"borrador")===k?"selected":""}>${l}</option>`).join("")}</select></label>
+ <label style="display:flex;gap:8px;align-items:center"><input name="pub" type="checkbox" style="width:auto;height:auto" ${t?.publico?"checked":""}>Mostrar en el turnero público</label>
+ <label>Reglas y notas<textarea name="r" rows="4">${v("reglas","")}</textarea></label>`,async f=>{
+  const o={nombre:f.get("n").trim(),genero:f.get("g"),categoria:f.get("c"),cant_parejas:+f.get("np"),grupos:+f.get("gr"),clasifican:+f.get("cl"),sets:+f.get("st"),estado:f.get("e"),publico:f.get("pub")==="on",reglas:f.get("r").trim()||null,fecha_inicio:f.get("fi")||null,fecha_fin:f.get("ff")||null};
+  if(o.grupos>0&&Math.floor(o.cant_parejas/o.grupos)<o.clasifican)return alert("Cada grupo tendría menos parejas que las que deben clasificar.");
+  if((o.grupos?o.grupos*o.clasifican:o.cant_parejas)<2)return alert("Tiene que haber al menos 2 parejas en los cruces.");
+  await done(t?sb.from("torneos").update(o).eq("id",t.id):sb.from("torneos").insert(o))})}
+function pform(p){dlg(p?"Editar pareja":"Nueva pareja",`<label>Jugador 1<input name="a" value="${esc(p?.jugador1||"")}" required></label><label>Jugador 2<input name="b" value="${esc(p?.jugador2||"")}" required></label>`,
+ f=>{const o={jugador1:f.get("a").trim(),jugador2:f.get("b").trim()};done(p?sb.from("torneo_parejas").update(o).eq("id",p.id):sb.from("torneo_parejas").insert({...o,torneo_id:ST.tid}))})}
+const rr=ids=>{const a=[...ids];if(a.length%2)a.push(null);const n=a.length,out=[];for(let r=0;r<n-1;r++){for(let i=0;i<n/2;i++){const x=a[i],y=a[n-1-i];if(x&&y)out.push([r+1,x,y])}a.splice(1,0,a.pop())}return out};
+const COLS=["id","torneo_id","fase","grupo","ronda","pos","pareja_a","pareja_b","origen_a","origen_b","estado","ganador","sig_id","sig_lado"];
+function resolver(M){const g=id=>M.find(m=>m.id===id);M.filter(m=>m.fase==="llave"&&m.ronda===1&&m.estado!=="finalizado").forEach(m=>{const la=m.origen_a==="Libre",lb=m.origen_b==="Libre";if(la===lb)return;const w=la?m.pareja_b:m.pareja_a;if(!w)return;m.estado="finalizado";m.ganador=w;const n=g(m.sig_id);if(n)n["pareja_"+m.sig_lado]=w});return M}
+async function sortear(t){const G=t.grupos;if(TP.length<2)return alert("Cargá al menos 2 parejas.");
+ if(G&&Math.floor(TP.length/G)<t.clasifican)return alert("Hay pocas parejas para "+G+" grupos clasificando "+t.clasifican+" por grupo.");
+ if(TM.length&&!confirm("Se borran los partidos y resultados actuales y se sortea de nuevo. ¿Seguir?"))return;
+ const ps=[...TP].sort(()=>Math.random()-.5).map((p,i)=>({...p,grupo:G?i%G+1:null})),id=()=>crypto.randomUUID(),rows=[];
+ for(let g=1;g<=G;g++)rr(ps.filter(p=>p.grupo===g).map(p=>p.id)).forEach(([j,a,b],i)=>rows.push({id:id(),torneo_id:t.id,fase:"grupo",grupo:g,ronda:j,pos:i+1,pareja_a:a,pareja_b:b}));
+ const Q=G?G*t.clasifican:ps.length,B=pw(Q),R=Math.log2(B),ord=bo(B),seeds=G?Array.from({length:Q},(_,i)=>`${Math.floor(i/G)+1}º Grupo ${lt(i%G+1)}`):ps.map(p=>p.id),M=[];
+ for(let r=1;r<=R;r++)for(let p=1;p<=B/2**r;p++)M.push({id:id(),torneo_id:t.id,fase:"llave",ronda:r,pos:p});
+ const at=(r,p)=>M.find(m=>m.ronda===r&&m.pos===p);
+ M.forEach(m=>{if(m.ronda<R){const n=at(m.ronda+1,Math.ceil(m.pos/2));m.sig_id=n.id;m.sig_lado=m.pos%2?"a":"b"}});
+ for(let p=1;p<=B/2;p++){const m=at(1,p);[["a",ord[2*p-2]],["b",ord[2*p-1]]].forEach(([l,s])=>{if(s>Q)m["origen_"+l]="Libre";else{m["origen_"+l]=G?seeds[s-1]:"Sorteo";if(!G)m["pareja_"+l]=seeds[s-1]}})}
+ if(!G)resolver(M);
+ const all=[...rows,...M].map(r=>Object.fromEntries(COLS.map(k=>[k,r[k]??(k==="estado"?"pendiente":null)])));
+ if(!await q(sb.from("torneo_partidos").delete().eq("torneo_id",t.id)))return;
+ if(!await q(sb.from("torneo_parejas").upsert(ps.map(p=>({id:p.id,torneo_id:t.id,jugador1:p.jugador1,jugador2:p.jugador2,grupo:p.grupo})))))return;
+ if(!await q(sb.from("torneo_partidos").insert(all)))return;
+ if(["borrador","inscripcion"].includes(t.estado))await q(sb.from("torneos").update({estado:"en_juego"}).eq("id",t.id));
+ ST.tt=G?"gru":"cru";render()}
+async function completar(t){if(TM.some(m=>m.fase==="grupo"&&m.estado!=="finalizado")&&!confirm("Hay partidos de grupo sin terminar. ¿Armar los cruces igual con la tabla actual?"))return;
+ const pos={};for(let g=1;g<=t.grupos;g++)pos[lt(g)]=TV.tabla(TP.filter(p=>p.grupo===g),TM.filter(m=>m.fase==="grupo"&&m.grupo===g)).map(r=>r.p.id);
+ const M=TM.map(m=>({...m}));M.filter(m=>m.fase==="llave"&&m.ronda===1&&m.estado!=="finalizado").forEach(m=>["a","b"].forEach(l=>{const x=/^(\d+)º Grupo ([A-Z])$/.exec(m["origen_"+l]||"");if(x)m["pareja_"+l]=pos[x[2]]?.[x[1]-1]||null}));
+ resolver(M);if(await q(sb.from("torneo_partidos").upsert(M.filter(m=>m.fase==="llave"))))render()}
+function partido(m){const t=byId(TO,ST.tid),n=t.sets,S=m.sets||[],ll=m.fase==="llave",lf=m.fecha?new Date(new Date(m.fecha).getTime()-3*36e5).toISOString().slice(0,16):"";
+ const po=v=>`<option value="">Por definir</option>`+TP.map(p=>`<option value="${p.id}" ${p.id===v?"selected":""}>${esc(TV.nom(p))}</option>`).join(""),tn=l=>esc(TV.nom(byId(TP,m["pareja_"+l]))||m["origen_"+l]||"Por definir");
+ dlg(ll?"Partido de llave":"Partido de grupo",(ll?`<label>Pareja A<select name="pa">${po(m.pareja_a)}</select></label><label>Pareja B<select name="pb">${po(m.pareja_b)}</select></label>`:`<div class="kv"><span>Pareja A</span><b>${tn("a")}</b><span>Pareja B</span><b>${tn("b")}</b></div>`)+
+ `<div><div class="m" style="margin-bottom:6px;font-weight:500">Resultado por set (A - B)</div>${Array.from({length:n},(_,i)=>`<div class="row" style="margin-bottom:6px"><span style="width:44px">Set ${i+1}</span><input name="a${i}" type="number" min="0" max="99" value="${S[i]?.[0]??""}" style="width:72px"><span>-</span><input name="b${i}" type="number" min="0" max="99" value="${S[i]?.[1]??""}" style="width:72px"></div>`).join("")}</div>
+ <label>Estado<select name="e">${Object.entries(TV.EST).map(([k,l])=>`<option value="${k}" ${m.estado===k?"selected":""}>${l}</option>`).join("")}</select></label><label>Fecha y hora<input name="f" type="datetime-local" value="${lf}"></label><label>Cancha<input name="c" value="${esc(m.cancha||"")}" placeholder="Cancha 1"></label>`,async f=>{
+  const pa=ll?f.get("pa")||null:m.pareja_a,pb=ll?f.get("pb")||null:m.pareja_b,sets=[];for(let i=0;i<n;i++){const x=f.get("a"+i),y=f.get("b"+i);if(x!==""&&y!=="")sets.push([+x,+y])}
+  const est=f.get("e");let gan=null;if(est==="finalizado"){if(!pa||!pb)return alert("Faltan definir las parejas.");let A=0,B=0;sets.forEach(([x,y])=>{if(x>y)A++;else if(y>x)B++});if(A===B)return alert("Cargá un resultado con ganador.");gan=A>B?pa:pb}
+  if(!await q(sb.from("torneo_partidos").update({pareja_a:pa,pareja_b:pb,sets,estado:est,ganador:gan,fecha:f.get("f")?new Date(f.get("f")+":00-03:00").toISOString():null,cancha:f.get("c")||null}).eq("id",m.id)))return;
+  if(ll&&gan!==m.ganador){if(m.sig_id)await q(sb.from("torneo_partidos").update({["pareja_"+m.sig_lado]:gan}).eq("id",m.sig_id));else await q(sb.from("torneos").update({estado:gan?"finalizado":"en_juego"}).eq("id",t.id))}
+  $("#d").close();render()})}
+Object.assign(ACT,{
+ tnew:()=>tform(),tedit:b=>tform(byId(TO,b.dataset.id)),topen:b=>{ST.tid=b.dataset.id;ST.tt="par";render()},tback:()=>{ST.tid=null;render()},ttab:b=>{ST.tt=b.dataset.id;render()},
+ tdel:b=>{const t=byId(TO,b.dataset.id);if(confirm("¿Eliminar «"+t.nombre+"» con sus parejas, partidos y resultados? No se puede deshacer.")){ST.tid=null;done(sb.from("torneos").delete().eq("id",t.id))}},
+ pnew:()=>{const t=byId(TO,ST.tid);if(TP.length>=t.cant_parejas)return alert("El cupo está completo ("+t.cant_parejas+"). Subí la cantidad de parejas en «Editar».");pform()},ped:b=>pform(byId(TP,b.dataset.id)),
+ pdel:b=>confirm("¿Quitar la pareja?"+(TM.length?" Ya hay fixture armado: vas a tener que sortear de nuevo.":""))&&done(sb.from("torneo_parejas").delete().eq("id",b.dataset.id)),
+ tsort:()=>sortear(byId(TO,ST.tid)),tcomp:()=>completar(byId(TO,ST.tid)),part:b=>partido(byId(TM,b.dataset.id))});
 </script></body></html>

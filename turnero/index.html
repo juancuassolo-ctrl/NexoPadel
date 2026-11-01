@@ -14,8 +14,12 @@ button:disabled{color:#9aa3ad;background:#f1f4f7;border-color:#f1f4f7;cursor:not
 .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--b);padding-top:12px}.r b{width:52px;font-weight:600}
 dialog{border:1px solid var(--b);border-radius:12px;padding:24px;width:min(92%,400px);box-shadow:0 8px 24px #0002}dialog::backdrop{background:#10161d55}
 form{display:grid;gap:12px;margin-top:12px}input{width:100%}#err{color:var(--n)}
-</style></head><body><div class="box" id="b">Cargando…</div><dialog id="d"></dialog>
+.top{max-width:600px;margin:0 auto 12px;display:flex;gap:6px}.top button.on{background:var(--t);color:#fff;border-color:var(--t)}
+.box[hidden]{display:none}#tn{max-width:960px}.tc{display:grid;gap:2px;width:100%;text-align:left;height:auto;padding:12px 14px}.tc b{font-weight:600}
+</style></head><body><div class="top"><button class="on" data-v="b">Reservar cancha</button><button data-v="tn">Torneos</button></div>
+<div class="box" id="b">Cargando…</div><div class="box tv" id="tn" hidden></div><dialog id="d"></dialog>
 <script src="../config.js"></script>
+<script src="../torneos.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const{SB_URL,SB_KEY,WA}=window.CFG,sb=supabase.createClient(SB_URL,SB_KEY),$=s=>document.querySelector(s),TZ="America/Argentina/Cordoba";
@@ -50,4 +54,18 @@ function pedir(kid,m){const k=K.find(x=>x.id===kid),d=$("#d");
   $("#b").innerHTML=`<h1>¡Turno reservado!</h1><p>${esc(k.nombre)} · ${dlab(dia)} a las ${hm(m)}. Te esperamos.</p>
   <a href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}"><button class="p" style="width:100%">Avisar por WhatsApp</button></a><button onclick="draw()">Reservar otro</button>`}
  d.showModal()}
+
+document.querySelectorAll(".top button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".top button").forEach(x=>x.classList.toggle("on",x===b));$("#b").hidden=b.dataset.v!=="b";$("#tn").hidden=b.dataset.v!=="tn";document.querySelector(".top").style.maxWidth=b.dataset.v==="tn"?"960px":"600px";if(b.dataset.v==="tn")loadT()});
+let TT=[],tsel=null;const TLAB={inscripcion:"Inscripción abierta",en_juego:"En juego",finalizado:"Finalizado"},GL={masculino:"Masculino",femenino:"Femenino",mixto:"Mixto"};
+async function loadT(){const{data}=await sb.from("torneos").select("*").order("created_at",{ascending:false});TT=data||[];if(tsel&&!TT.some(x=>x.id===tsel))tsel=null;showT()}
+async function showT(){const box=$("#tn"),t=TT.find(x=>x.id===tsel);
+ if(!TT.length){box.innerHTML=`<h1>Torneos</h1><p>Por ahora no hay torneos publicados.</p>`;return}
+ if(!t){box.innerHTML=`<h1>Torneos</h1>`+TT.map(x=>`<button class="tc" data-t="${x.id}"><b>${esc(x.nombre)}</b><span class="m">${GL[x.genero]} · ${esc(x.categoria)} · ${TLAB[x.estado]}</span></button>`).join("");box.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tsel=b.dataset.t;showT()});return}
+ const[a,c]=await Promise.all([sb.from("torneo_parejas").select("id,jugador1,jugador2,grupo").eq("torneo_id",t.id),sb.from("torneo_partidos").select("*").eq("torneo_id",t.id).order("ronda").order("pos")]);
+ const P=a.data||[],M=c.data||[],G=TV.grupos(t,P,M),LL=TV.llave(M,P),f=x=>new Date(x+"T12:00:00").toLocaleDateString("es-AR",{day:"numeric",month:"long"});
+ box.innerHTML=`<div><button id="tb">Todos los torneos</button></div><h1>${esc(t.nombre)}</h1><p>${GL[t.genero]} · ${esc(t.categoria)} · ${TLAB[t.estado]}${t.fecha_inicio?" · desde el "+f(t.fecha_inicio):""}${t.fecha_fin?" hasta el "+f(t.fecha_fin):""}</p>
+ ${t.reglas?`<div><h3>Reglas</h3><p style="white-space:pre-wrap;color:var(--t)">${esc(t.reglas)}</p></div>`:""}${TV.campeon(M,P)}
+ ${G?`<h3>Fase de grupos</h3>${G}<p class="m">Victoria suma 2 puntos. La marca azul indica quiénes clasifican.</p>`:""}${LL?`<h3>Cruces</h3>${LL}`:""}${!G&&!LL?`<p>El fixture se publica cuando cierre la inscripción.</p>`:""}`;
+ $("#tb").onclick=()=>{tsel=null;showT()}}
+setInterval(()=>{if(!$("#tn").hidden&&tsel)showT()},45000);
 </script></body></html>
