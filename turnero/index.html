@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Reservá tu cancha</title>
+<style>
+:root{--bg:#eef1f3;--s:#fff;--b:#e3e7ea;--c:#c3c8cc;--t:#131416;--m:#5d5f60;--a:#0d7480;--n:#c4242a}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--t);font:400 15px/22px system-ui,sans-serif;padding:16px}
+.box{max-width:560px;margin:2vh auto;background:var(--s);border:1px solid var(--b);border-radius:16px;padding:20px;display:grid;gap:14px}
+h1{font-size:26px;line-height:30px;color:var(--a)}p,.m{color:var(--m)}
+button,input{font:inherit;color:var(--t);background:var(--s);border:1px solid var(--c);border-radius:8px;height:40px;padding:0 12px;cursor:pointer}
+button:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}button.p{background:var(--t);color:#fff;border-color:var(--t)}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.days button{flex:none;height:48px;line-height:16px;font-size:13px}.days button.on{background:var(--a);color:#fff;border-color:var(--a)}
+.r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--b);padding-top:10px}.r b{width:52px}
+dialog{border:1px solid var(--b);border-radius:12px;padding:20px;width:min(92%,380px)}dialog::backdrop{background:#1317}
+form{display:grid;gap:10px}input{width:100%}#err{color:var(--n)}
+</style></head><body><div class="box" id="b">Cargando…</div><dialog id="d"></dialog>
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const{SB_URL,SB_KEY,WA}=window.CFG,sb=supabase.createClient(SB_URL,SB_KEY),$=s=>document.querySelector(s),TZ="America/Argentina/Cordoba";
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=n=>"$"+Number(n||0).toLocaleString("es-AR",{maximumFractionDigits:0});
+const hm=m=>String(Math.floor(m/60)%24).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+const iso=(d,m)=>`${d}T${hm(m)}:00-03:00`;
+const slots=c=>{const r=[];for(let m=c.apertura*60;m+c.duracion<=c.cierre*60;m+=c.duracion)r.push(m);return r};
+const dstr=i=>new Date(Date.now()+i*864e5).toLocaleDateString("en-CA",{timeZone:TZ});
+const dlab=d=>new Date(d+"T12:00:00").toLocaleDateString("es-AR",{weekday:"short",day:"numeric",month:"numeric"});
+let CF,K=[],dia,ocu=new Set();
+(async()=>{const[a,b]=await Promise.all([sb.from("config").select("*").single(),sb.from("canchas").select("*").eq("activa",true).order("nombre")]);
+ if(a.error)return $("#b").textContent="No se pudo cargar. Revisá config.js y supabase.sql.";
+ CF=a.data;K=b.data||[];dia=dstr(0);draw()})();
+async function draw(){
+ const{data}=await sb.rpc("disponibilidad",{p_fecha:dia});ocu=new Set((data||[]).map(o=>o.cancha_id+"|"+new Date(o.inicio).getTime()));
+ $("#b").innerHTML=`<h1>${esc(CF.nombre)}</h1><p>Elegí día, horario y cancha. Turnos de ${CF.duracion} min · ${money(CF.precio)}. Se paga en el complejo.</p>
+ <div class="days">${Array.from({length:CF.dias_adelante},(_,i)=>dstr(i)).map(d=>`<button data-d="${d}" class="${d===dia?"on":""}">${dlab(d)}</button>`).join("")}</div>
+ ${slots(CF).map(m=>`<div class="r"><b>${hm(m)}</b>${K.map(k=>{const t=+new Date(iso(dia,m)),off=t<Date.now()||ocu.has(k.id+"|"+t);
+  return`<button ${off?"disabled":""} data-k="${k.id}" data-m="${m}">${esc(k.nombre)}</button>`}).join("")}</div>`).join("")}`;
+ $("#b").querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{dia=b.dataset.d;draw()});
+ $("#b").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>pedir(b.dataset.k,+b.dataset.m))}
+function pedir(kid,m){const k=K.find(x=>x.id===kid),d=$("#d");
+ d.innerHTML=`<h3>${esc(k.nombre)} · ${dlab(dia)} ${hm(m)}</h3><form><input name="n" placeholder="Nombre y apellido" autocomplete="name" required>
+ <input name="t" inputmode="tel" placeholder="WhatsApp (ej: 3534123456)" required><span id="err"></span>
+ <button class="p">Confirmar reserva</button><button type="button" data-x>Cancelar</button></form>`;
+ d.querySelector("[data-x]").onclick=()=>d.close();
+ d.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=e.target,btn=f.querySelector(".p");btn.disabled=true;btn.textContent="Reservando…";
+  const{error}=await sb.rpc("reservar",{p_cancha:kid,p_inicio:iso(dia,m),p_nombre:f.n.value,p_telefono:f.t.value});
+  if(error){$("#err").textContent=error.message;btn.disabled=false;btn.textContent="Confirmar reserva";if(/ocup/.test(error.message))setTimeout(()=>{d.close();draw()},1500);return}
+  d.close();const msg=`Hola, soy ${f.n.value}. Reservé ${k.nombre} el ${dlab(dia)} a las ${hm(m)}.`;
+  $("#b").innerHTML=`<h1>¡Turno reservado!</h1><p>${esc(k.nombre)} · ${dlab(dia)} a las ${hm(m)}. Te esperamos.</p>
+  <a href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}"><button class="p" style="width:100%">Avisar por WhatsApp</button></a><button onclick="draw()">Reservar otro</button>`}
+ d.showModal()}
+</script></body></html>

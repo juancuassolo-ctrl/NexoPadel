@@ -1,0 +1,85 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Gestión · Pádel</title>
+<style>
+:root{--bg:#eef1f3;--s:#fff;--r:#f4f6f8;--b:#e3e7ea;--c:#c3c8cc;--t:#131416;--m:#5d5f60;--a:#0d7480;--n:#c4242a;--p:#1e7b4f}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--t);font:400 14px/20px system-ui,sans-serif}
+button,input,select{font:inherit;color:var(--t);background:var(--s);border:1px solid var(--c);border-radius:6px;height:32px;padding:0 10px;cursor:pointer}
+button.p{background:var(--t);color:#fff;border-color:var(--t)}button.d{color:var(--n)}
+nav{display:flex;gap:6px;align-items:center;padding:12px 16px;background:var(--s);border-bottom:1px solid var(--b);flex-wrap:wrap}nav b{color:var(--a);font-size:18px;margin-right:12px}
+nav button.on{background:var(--a);color:#fff;border-color:var(--a)}nav span{margin-left:auto;color:var(--m);font-size:12px}
+main{padding:16px;max-width:1100px;margin:auto}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.kpi{display:flex;gap:24px;margin-bottom:12px}.kpi b{display:block;font-size:24px}.kpi span{color:var(--m)}
+.w{overflow-x:auto;background:var(--s);border:1px solid var(--b);border-radius:12px}table{width:100%;border-collapse:collapse}
+th{font-weight:500;color:var(--m);padding:8px;text-align:left}td{padding:4px 8px;border-top:1px solid var(--b)}td.h{font-weight:500;width:64px}
+td button{width:100%;min-height:40px;height:auto;text-align:left;line-height:16px;border-color:var(--b);color:var(--m)}
+td button.res{background:#ffedea;color:var(--t);border-color:#f3c2bc}td button.res.ok{background:#dcfae5;border-color:#b7e6c6}td button small{display:block;color:var(--m)}
+dialog{border:1px solid var(--b);border-radius:12px;padding:20px;width:min(92%,380px)}dialog::backdrop{background:#1317}
+dialog form,.col{display:grid;gap:10px;margin-top:10px}label{display:grid;gap:4px;font-weight:500}input,select{width:100%}
+.login{max-width:320px;margin:12vh auto;display:grid;gap:10px}.login b{font-size:30px;color:var(--a)}
+.card{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:16px;margin-bottom:16px}
+</style></head><body>
+<nav id="nav"></nav><main id="v"></main><dialog id="d"></dialog>
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const{SB_URL,SB_KEY}=window.CFG,sb=supabase.createClient(SB_URL,SB_KEY),$=s=>document.querySelector(s),TZ="America/Argentina/Cordoba";
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=n=>"$"+Number(n||0).toLocaleString("es-AR",{maximumFractionDigits:0});
+const hoy=()=>new Date().toLocaleDateString("en-CA",{timeZone:TZ});
+const hm=m=>String(Math.floor(m/60)%24).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+const iso=(d,m)=>`${d}T${hm(m)}:00-03:00`;
+const slots=c=>{const r=[];for(let m=c.apertura*60;m+c.duracion<=c.cierre*60;m+=c.duracion)r.push(m);return r};
+const wa=(t,m)=>`https://wa.me/${t.startsWith("54")?t:"549"+t.replace(/^0/,"")}?text=${encodeURIComponent(m)}`;
+async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message);return null}return r}
+let CF,K=[],R=[],tab="agenda",dia=hoy(),who="";
+(async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session):login()})();
+function login(msg){$("#nav").innerHTML="";$("#v").innerHTML=`<form class="login" id="lf"><b>Gestión</b><span style="color:var(--m)">Acceso privado</span>
+ <input name="e" type="email" placeholder="Email" required><input name="p" type="password" placeholder="Contraseña" required><button class="p">Ingresar</button><span style="color:var(--n)">${msg||""}</span></form>`;
+ $("#lf").onsubmit=async e=>{e.preventDefault();const f=e.target,{error}=await sb.auth.signInWithPassword({email:f.e.value,password:f.p.value});error?login("Email o contraseña incorrectos."):location.reload()}}
+async function start(s){const{data:ok}=await sb.rpc("es_admin");if(!ok){await sb.auth.signOut();return login("Esta cuenta no tiene acceso.")}who=s.user.email;await load()}
+async function load(){const[a,b]=await Promise.all([q(sb.from("config").select("*").single()),q(sb.from("canchas").select("*").order("nombre"))]);
+ if(!a||!b)return;CF=a.data;K=b.data;render()}
+async function render(){
+ $("#nav").innerHTML=`<b>${esc(CF.nombre)}</b>`+[["agenda","Agenda"],["config","Canchas y precios"]].map(t=>`<button data-act="tab" data-id="${t[0]}" class="${tab===t[0]?"on":""}">${t[1]}</button>`).join("")+`<span>${esc(who)} <button data-act="out">Salir</button></span>`;
+ $("#v").innerHTML=tab==="agenda"?await vAgenda():vConfig()}
+async function vAgenda(){
+ const r=await q(sb.from("reservas").select("*").neq("estado","cancelado").gte("inicio",dia+"T00:00:00-03:00").lte("inicio",dia+"T23:59:59-03:00"));R=r?.data||[];
+ const act=K.filter(k=>k.activa),cob=R.filter(x=>x.pagado).reduce((s,x)=>s+x.precio,0),pen=R.filter(x=>!x.pagado).reduce((s,x)=>s+x.precio,0);
+ return`<div class="row"><button data-act="dia" data-id="0">Hoy</button><button data-act="dia" data-id="1">Mañana</button><input type="date" id="fd" value="${dia}"></div>
+ <div class="kpi"><div><span>Turnos</span><b>${R.length}</b></div><div><span>Cobrado</span><b>${money(cob)}</b></div><div><span>Por cobrar</span><b>${money(pen)}</b></div></div>
+ <div class="w"><table><tr><th></th>${act.map(k=>`<th>${esc(k.nombre)}</th>`).join("")}</tr>
+ ${slots(CF).map(m=>`<tr><td class="h">${hm(m)}</td>${act.map(k=>{const x=R.find(y=>y.cancha_id===k.id&&+new Date(y.inicio)===+new Date(iso(dia,m)));
+  return`<td>${x?`<button class="res ${x.pagado?"ok":""}" data-act="ver" data-id="${x.id}">${esc(x.nombre)}<small>${x.pagado?"Pagado · "+x.metodo_pago:money(x.precio)+" · "+x.origen}</small></button>`:`<button data-act="nuevo" data-k="${k.id}" data-m="${m}">+ libre</button>`}</td>`}).join("")}</tr>`).join("")}</table></div>`}
+function vConfig(){return`<div class="card"><h3>Horarios y precio</h3><form id="cf" class="col"><label>Nombre del complejo<input name="nombre" value="${esc(CF.nombre)}"></label>
+ <label>Apertura (hora)<input name="apertura" type="number" min="0" max="23" value="${CF.apertura}"></label><label>Cierre (hora, 24 = medianoche)<input name="cierre" type="number" min="1" max="24" value="${CF.cierre}"></label>
+ <label>Duración del turno (min)<input name="duracion" type="number" min="30" step="15" value="${CF.duracion}"></label><label>Precio por turno<input name="precio" type="number" min="0" value="${CF.precio}"></label>
+ <label>Días de anticipación<input name="dias_adelante" type="number" min="1" max="60" value="${CF.dias_adelante}"></label><button class="p">Guardar</button></form></div>
+ <div class="card"><h3>Canchas</h3>${K.map(k=>`<div class="row"><b style="flex:1">${esc(k.nombre)} ${k.activa?"":"(inactiva)"}</b><button data-act="ren" data-id="${k.id}">Renombrar</button><button data-act="tog" data-id="${k.id}">${k.activa?"Desactivar":"Activar"}</button></div>`).join("")}<button class="p" data-act="addk">+ Agregar cancha</button></div>`}
+function dlg(h){const d=$("#d");d.innerHTML=h;d.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>d.close());d.showModal();return d}
+const done=async p=>{if(await q(p)){$("#d").close();render()}};
+const ACT={
+ tab:b=>{tab=b.dataset.id;render()},out:async()=>{await sb.auth.signOut();location.reload()},
+ dia:b=>{dia=new Date(Date.now()+ +b.dataset.id*864e5).toLocaleDateString("en-CA",{timeZone:TZ});render()},
+ nuevo:b=>{const k=K.find(x=>x.id===b.dataset.k),m=+b.dataset.m;
+  const d=dlg(`<h3>${esc(k.nombre)} · ${hm(m)}</h3><form><label>Nombre<input name="n" required></label><label>WhatsApp<input name="t" inputmode="tel" required></label>
+  <label>Precio<input name="p" type="number" value="${CF.precio}"></label><button class="p">Reservar</button><button type="button" data-x>Cancelar</button></form>`);
+  d.querySelector("form").onsubmit=e=>{e.preventDefault();const f=e.target,t=f.t.value.replace(/\D/g,"");if(t.length<8)return alert("Teléfono inválido");
+   const ini=new Date(iso(dia,m));done(sb.from("reservas").insert({cancha_id:k.id,inicio:ini.toISOString(),fin:new Date(+ini+CF.duracion*6e4).toISOString(),nombre:f.n.value.trim(),telefono:t,precio:+f.p.value,origen:"admin"}))}},
+ ver:b=>{const x=R.find(y=>y.id===b.dataset.id),k=K.find(y=>y.id===x.cancha_id);
+  dlg(`<h3>${esc(x.nombre)}</h3><p>${esc(k.nombre)} · ${new Date(x.inicio).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",timeZone:TZ})} · ${x.telefono}</p><div class="col">
+  ${x.pagado?`<button data-act="despagar" data-id="${x.id}">Quitar pago</button>`:`<button class="p" data-act="pagar" data-id="${x.id}" data-m="efectivo">Cobrado · efectivo</button><button class="p" data-act="pagar" data-id="${x.id}" data-m="transferencia">Cobrado · transferencia</button>`}
+  <a href="${wa(x.telefono,`Hola ${x.nombre}, te escribo del complejo por tu turno.`)}" target="_blank"><button style="width:100%">WhatsApp</button></a>
+  <button class="d" data-act="cancelar" data-id="${x.id}">Cancelar turno</button><button data-x>Cerrar</button></div>`)},
+ pagar:b=>done(sb.from("reservas").update({pagado:true,metodo_pago:b.dataset.m}).eq("id",b.dataset.id)),
+ despagar:b=>done(sb.from("reservas").update({pagado:false,metodo_pago:null}).eq("id",b.dataset.id)),
+ cancelar:b=>confirm("¿Cancelar este turno? Queda libre para otro.")&&done(sb.from("reservas").update({estado:"cancelado"}).eq("id",b.dataset.id)),
+ ren:b=>{const k=K.find(x=>x.id===b.dataset.id),n=prompt("Nuevo nombre",k.nombre);n&&q(sb.from("canchas").update({nombre:n.trim()}).eq("id",k.id)).then(load)},
+ tog:b=>{const k=K.find(x=>x.id===b.dataset.id);q(sb.from("canchas").update({activa:!k.activa}).eq("id",k.id)).then(load)},
+ addk:()=>{const n=prompt("Nombre de la cancha");n&&q(sb.from("canchas").insert({nombre:n.trim()})).then(load)}};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(b&&ACT[b.dataset.act])ACT[b.dataset.act](b)});
+document.addEventListener("change",e=>{if(e.target.id==="fd"&&e.target.value){dia=e.target.value;render()}});
+document.addEventListener("submit",async e=>{if(e.target.id!=="cf")return;e.preventDefault();const f=e.target;
+ const o={nombre:f.nombre.value,apertura:+f.apertura.value,cierre:+f.cierre.value,duracion:+f.duracion.value,precio:+f.precio.value,dias_adelante:+f.dias_adelante.value};
+ if(o.cierre<=o.apertura)return alert("El cierre debe ser posterior a la apertura");
+ if(await q(sb.from("config").update(o).eq("id",1))){alert("Guardado");load()}});
+</script></body></html>
