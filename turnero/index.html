@@ -1,16 +1,19 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Reservá tu cancha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#eef1f3;--s:#fff;--b:#e3e7ea;--c:#c3c8cc;--t:#131416;--m:#5d5f60;--a:#0d7480;--n:#c4242a}
-*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--t);font:400 15px/22px system-ui,sans-serif;padding:16px}
-.box{max-width:560px;margin:2vh auto;background:var(--s);border:1px solid var(--b);border-radius:16px;padding:20px;display:grid;gap:14px}
-h1{font-size:26px;line-height:30px;color:var(--a)}p,.m{color:var(--m)}
-button,input{font:inherit;color:var(--t);background:var(--s);border:1px solid var(--c);border-radius:8px;height:40px;padding:0 12px;cursor:pointer}
-button:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}button.p{background:var(--t);color:#fff;border-color:var(--t)}
+:root{--bg:#f7f9fb;--s:#fff;--b:#e3e8ee;--c:#cfd6de;--t:#10161d;--m:#5b6672;--a:#0a5cb5;--soft:#eef5fc;--trk:#d3e4f6;--n:#c4242a}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--t);font:400 15px/22px "DM Sans",Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;padding:16px}
+.box{max-width:600px;margin:2vh auto;background:var(--s);border:1px solid var(--b);border-radius:8px;padding:24px;display:grid;gap:16px}
+h1{font-size:24px;line-height:30px;font-weight:700}h1 svg{vertical-align:-6px;margin-right:10px}h3{font-size:18px;font-weight:600}p,.m{color:var(--m)}
+button,input{font:inherit;color:var(--t);background:var(--s);border:1px solid var(--c);border-radius:6px;height:40px;padding:0 14px;cursor:pointer}button:hover:not(:disabled){background:var(--soft);border-color:var(--a)}
+button:disabled{color:#9aa3ad;background:#f1f4f7;border-color:#f1f4f7;cursor:not-allowed;text-decoration:line-through}button.p{background:var(--t);color:#fff;border-color:var(--t)}
+:focus-visible{outline:2px solid var(--a);outline-offset:1px}
 .days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.days button{flex:none;height:48px;line-height:16px;font-size:13px}.days button.on{background:var(--a);color:#fff;border-color:var(--a)}
-.r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--b);padding-top:10px}.r b{width:52px}
-dialog{border:1px solid var(--b);border-radius:12px;padding:20px;width:min(92%,380px)}dialog::backdrop{background:#1317}
-form{display:grid;gap:10px}input{width:100%}#err{color:var(--n)}
+.r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--b);padding-top:12px}.r b{width:52px;font-weight:600}
+dialog{border:1px solid var(--b);border-radius:12px;padding:24px;width:min(92%,400px);box-shadow:0 8px 24px #0002}dialog::backdrop{background:#10161d55}
+form{display:grid;gap:12px;margin-top:12px}input{width:100%}#err{color:var(--n)}
 </style></head><body><div class="box" id="b">Cargando…</div><dialog id="d"></dialog>
 <script src="../config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -29,7 +32,7 @@ let CF,K=[],dia,ocu=new Set();
  CF=a.data;K=b.data||[];dia=dstr(0);draw()})();
 async function draw(){
  const{data}=await sb.rpc("disponibilidad",{p_fecha:dia});ocu=new Set((data||[]).map(o=>o.cancha_id+"|"+new Date(o.inicio).getTime()));
- $("#b").innerHTML=`<h1>${esc(CF.nombre)}</h1><p>Elegí día, horario y cancha. Turnos de ${CF.duracion} min · ${money(CF.precio)}. Se paga en el complejo.</p>
+ $("#b").innerHTML=`<h1><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#0a5cb5"/><path d="M3.5 8.5c5.5 0 9.5 4 9.5 11.5M20.5 15.5C15 15.5 11 11.5 11 4" stroke="#fff" fill="none" stroke-width="1.6"/></svg>${esc(CF.nombre)}</h1><p>Elegí día, horario y cancha. Turnos de ${CF.duracion} min · ${money(CF.precio)}. Se paga en el complejo.</p>
  <div class="days">${Array.from({length:CF.dias_adelante},(_,i)=>dstr(i)).map(d=>`<button data-d="${d}" class="${d===dia?"on":""}">${dlab(d)}</button>`).join("")}</div>
  ${slots(CF).map(m=>`<div class="r"><b>${hm(m)}</b>${K.map(k=>{const t=+new Date(iso(dia,m)),off=t<Date.now()||ocu.has(k.id+"|"+t);
   return`<button ${off?"disabled":""} data-k="${k.id}" data-m="${m}">${esc(k.nombre)}</button>`}).join("")}</div>`).join("")}`;
