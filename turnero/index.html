@@ -1,23 +1,44 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Reservá tu cancha</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Nexo Pádel · Reservas y torneos</title>
+<link rel="icon" href="../assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f7f9fb;--s:#fff;--b:#e3e8ee;--c:#cfd6de;--t:#10161d;--m:#5b6672;--a:#0a5cb5;--soft:#eef5fc;--trk:#d3e4f6;--n:#c4242a}
-*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--t);font:400 15px/22px "DM Sans",Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;padding:16px}
-.box{max-width:600px;margin:2vh auto;background:var(--s);border:1px solid var(--b);border-radius:8px;padding:24px;display:grid;gap:16px}
-h1{font-size:24px;line-height:30px;font-weight:700}h1 svg{vertical-align:-6px;margin-right:10px}h3{font-size:18px;font-weight:600}p,.m{color:var(--m)}
-button,input{font:inherit;color:var(--t);background:var(--s);border:1px solid var(--c);border-radius:6px;height:40px;padding:0 14px;cursor:pointer}button:hover:not(:disabled){background:var(--soft);border-color:var(--a)}
-button:disabled{color:#9aa3ad;background:#f1f4f7;border-color:#f1f4f7;cursor:not-allowed;text-decoration:line-through}button.p{background:var(--t);color:#fff;border-color:var(--t)}
-:focus-visible{outline:2px solid var(--a);outline-offset:1px}
-.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.days button{flex:none;height:48px;line-height:16px;font-size:13px}.days button.on{background:var(--a);color:#fff;border-color:var(--a)}
-.r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--b);padding-top:12px}.r b{width:52px;font-weight:600}
-dialog{border:1px solid var(--b);border-radius:12px;padding:24px;width:min(92%,400px);box-shadow:0 8px 24px #0002}dialog::backdrop{background:#10161d55}
+:root{--ink:#0e141b;--lime:#a6cb3f;--limed:#55800c;--lsoft:#f2f8e2;--s:#fff;--b:#e1e6dc;--c:#c9d0c3;--m:#586155;--n:#c4242a}
+*{box-sizing:border-box;margin:0}
+body{background:var(--ink);color:var(--ink);font:400 15px/22px "DM Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums;min-height:100svh}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 56px;display:grid;gap:16px}.mn{min-width:0}
+.hero{position:relative;overflow:hidden;border-radius:12px;color:#fff;display:flex;gap:16px;align-items:flex-end;padding:20px;min-height:180px;background:url(../assets/fondo.jpg) center 80%/cover no-repeat}
+.hero::before{content:"";position:absolute;inset:0;background:#0b11194d}.hero>*{position:relative}
+@media(min-width:900px){.wrap:not(.wide){grid-template-columns:360px minmax(0,640px);justify-content:center;align-items:start}
+.wrap:not(.wide) .hero{position:sticky;top:16px;min-height:calc(100svh - 32px);flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:28px}}
+.hero img{width:78px;height:78px;border-radius:50%;flex:none;border:2px solid #ffffff3d}
+.hero h1{font-size:clamp(26px,5vw,40px);line-height:1.05;font-weight:700;letter-spacing:-.02em}.hero p{color:#ffffffe6;margin-top:6px}
+.top{display:flex;gap:6px;margin-bottom:12px}.top button{background:#ffffff1c;color:#fff;border:1px solid #ffffff38;font-weight:500}.top button:hover:not(.on){background:#ffffff33;border-color:#ffffff55}
+.top button.on{background:var(--lime);color:var(--ink);border-color:var(--lime);font-weight:700}
+.box{background:var(--s);border-radius:12px;padding:24px;display:grid;gap:10px}
+@media(max-width:600px){.box{padding:16px}.wrap{padding:12px 12px 40px}}.box[hidden]{display:none}
+h2{font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.01em}h3{font-size:16px;font-weight:600;margin-top:8px}p,.m{color:var(--m)}
+button,input{font:inherit;color:var(--ink);background:var(--s);border:1px solid var(--c);border-radius:8px;height:42px;padding:0 14px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--limed);background:var(--lsoft)}
+button:disabled{color:#9aa395;background:#eef0eb;border-color:#eef0eb;cursor:not-allowed;text-decoration:line-through}
+button.p{background:var(--lime);border-color:var(--lime);font-weight:700}button.p:hover:not(:disabled){background:#b7d95a;border-color:#b7d95a}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.days button{flex:none;height:50px;line-height:16px;font-size:13px}.days button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f5f7f2;border-radius:8px;padding:10px 12px}.r b{width:48px;flex:none;font-weight:600}.r button{flex:1 1 0;min-width:0;padding:0 4px;font-size:14px}
+dialog{border:0;border-radius:12px;padding:24px;width:min(92%,400px);max-height:90vh;overflow:auto}dialog::backdrop{background:#0b1119aa}
 form{display:grid;gap:12px;margin-top:12px}input{width:100%}#err{color:var(--n)}
-.top{max-width:600px;margin:0 auto 12px;display:flex;gap:6px}.top button.on{background:var(--t);color:#fff;border-color:var(--t)}
-.box[hidden]{display:none}#tn{max-width:960px}.tc{display:grid;gap:2px;width:100%;text-align:left;height:auto;padding:12px 14px}.tc b{font-weight:600}
-</style></head><body><div class="top"><button class="on" data-v="b">Reservar cancha</button><button data-v="tn">Torneos</button></div>
-<div class="box" id="b">Cargando…</div><div class="box tv" id="tn" hidden></div><dialog id="d"></dialog>
+.ts{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;background:#eef0eb;color:#3b4338;width:fit-content}
+.ts.inscripcion{background:var(--lime);color:var(--ink)}.ts.en_juego{background:#fffbeb;color:#92400e}
+.tc{display:grid;gap:6px;width:100%;text-align:left;height:auto;padding:14px 16px;border-left:4px solid var(--c)}.tc.inscripcion{border-left-color:var(--lime)}.tc b{font-size:17px;font-weight:700}
+.ins{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--lsoft);border:1px solid #d7e8ad;border-radius:8px;padding:14px 16px}.ins p{margin:0}
+.pl{display:grid;gap:4px}.pl div{padding:8px 12px;background:#f5f7f2;border-radius:6px}
+</style></head><body>
+<div class="wrap" id="w">
+ <header class="hero"><img src="../assets/logo.png" alt="Nexo Pádel"><div><h1 id="ht">Reservá tu cancha</h1><p id="hp">Elegí día, horario y cancha. Se confirma al instante.</p></div></header>
+ <main class="mn"><nav class="top"><button class="on" data-v="b">Reservar cancha</button><button data-v="tn">Torneos</button></nav>
+ <div class="box" id="b">Cargando…</div><div class="box tv" id="tn" hidden></div></main>
+</div><dialog id="d"></dialog>
 <script src="../config.js"></script>
 <script src="../torneos.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -30,13 +51,17 @@ const iso=(d,m)=>`${d}T${hm(m)}:00-03:00`;
 const slots=c=>{const r=[];for(let m=c.apertura*60;m+c.duracion<=c.cierre*60;m+=c.duracion)r.push(m);return r};
 const dstr=i=>new Date(Date.now()+i*864e5).toLocaleDateString("en-CA",{timeZone:TZ});
 const dlab=d=>new Date(d+"T12:00:00").toLocaleDateString("es-AR",{weekday:"short",day:"numeric",month:"numeric"});
+const HERO={b:["Reservá tu cancha","Elegí día, horario y cancha. Se confirma al instante."],tn:["Torneos","Grupos, resultados y cuadros, siempre actualizados."]};
+document.querySelectorAll(".top button").forEach(b=>b.onclick=()=>{const v=b.dataset.v;document.querySelectorAll(".top button").forEach(x=>x.classList.toggle("on",x===b));
+ $("#b").hidden=v!=="b";$("#tn").hidden=v!=="tn";$("#w").classList.toggle("wide",v==="tn");$("#ht").textContent=HERO[v][0];$("#hp").textContent=HERO[v][1];if(v==="tn")loadT()});
+/* ---------- RESERVAS ---------- */
 let CF,K=[],dia,ocu=new Set();
 (async()=>{const[a,b]=await Promise.all([sb.from("config").select("*").single(),sb.from("canchas").select("*").eq("activa",true).order("nombre")]);
  if(a.error)return $("#b").textContent="No se pudo cargar. Revisá config.js y supabase.sql.";
  CF=a.data;K=b.data||[];dia=dstr(0);draw()})();
 async function draw(){
  const{data}=await sb.rpc("disponibilidad",{p_fecha:dia});ocu=new Set((data||[]).map(o=>o.cancha_id+"|"+new Date(o.inicio).getTime()));
- $("#b").innerHTML=`<h1><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#0a5cb5"/><path d="M3.5 8.5c5.5 0 9.5 4 9.5 11.5M20.5 15.5C15 15.5 11 11.5 11 4" stroke="#fff" fill="none" stroke-width="1.6"/></svg>${esc(CF.nombre)}</h1><p>Elegí día, horario y cancha. Turnos de ${CF.duracion} min · ${money(CF.precio)}. Se paga en el complejo.</p>
+ $("#b").innerHTML=`<p>Turnos de ${CF.duracion} min · ${money(CF.precio)} por turno · se paga en el complejo.</p>
  <div class="days">${Array.from({length:CF.dias_adelante},(_,i)=>dstr(i)).map(d=>`<button data-d="${d}" class="${d===dia?"on":""}">${dlab(d)}</button>`).join("")}</div>
  ${slots(CF).map(m=>`<div class="r"><b>${hm(m)}</b>${K.map(k=>{const t=+new Date(iso(dia,m)),off=t<Date.now()||ocu.has(k.id+"|"+t);
   return`<button ${off?"disabled":""} data-k="${k.id}" data-m="${m}">${esc(k.nombre)}</button>`}).join("")}</div>`).join("")}`;
@@ -51,21 +76,38 @@ function pedir(kid,m){const k=K.find(x=>x.id===kid),d=$("#d");
   const{error}=await sb.rpc("reservar",{p_cancha:kid,p_inicio:iso(dia,m),p_nombre:f.n.value,p_telefono:f.t.value});
   if(error){$("#err").textContent=error.message;btn.disabled=false;btn.textContent="Confirmar reserva";if(/ocup/.test(error.message))setTimeout(()=>{d.close();draw()},1500);return}
   d.close();const msg=`Hola, soy ${f.n.value}. Reservé ${k.nombre} el ${dlab(dia)} a las ${hm(m)}.`;
-  $("#b").innerHTML=`<h1>¡Turno reservado!</h1><p>${esc(k.nombre)} · ${dlab(dia)} a las ${hm(m)}. Te esperamos.</p>
+  $("#b").innerHTML=`<h2>¡Turno reservado!</h2><p>${esc(k.nombre)} · ${dlab(dia)} a las ${hm(m)}. Te esperamos.</p>
   <a href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}"><button class="p" style="width:100%">Avisar por WhatsApp</button></a><button onclick="draw()">Reservar otro</button>`}
  d.showModal()}
-
-document.querySelectorAll(".top button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".top button").forEach(x=>x.classList.toggle("on",x===b));$("#b").hidden=b.dataset.v!=="b";$("#tn").hidden=b.dataset.v!=="tn";document.querySelector(".top").style.maxWidth=b.dataset.v==="tn"?"960px":"600px";if(b.dataset.v==="tn")loadT()});
+/* ---------- TORNEOS ---------- */
 let TT=[],tsel=null;const TLAB={inscripcion:"Inscripción abierta",en_juego:"En juego",finalizado:"Finalizado"},GL={masculino:"Masculino",femenino:"Femenino",mixto:"Mixto"};
+const fl=x=>new Date(x+"T12:00:00").toLocaleDateString("es-AR",{day:"numeric",month:"long"});
 async function loadT(){const{data}=await sb.from("torneos").select("*").order("created_at",{ascending:false});TT=data||[];if(tsel&&!TT.some(x=>x.id===tsel))tsel=null;showT()}
 async function showT(){const box=$("#tn"),t=TT.find(x=>x.id===tsel);
- if(!TT.length){box.innerHTML=`<h1>Torneos</h1><p>Por ahora no hay torneos publicados.</p>`;return}
- if(!t){box.innerHTML=`<h1>Torneos</h1>`+TT.map(x=>`<button class="tc" data-t="${x.id}"><b>${esc(x.nombre)}</b><span class="m">${GL[x.genero]} · ${esc(x.categoria)} · ${TLAB[x.estado]}</span></button>`).join("");box.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tsel=b.dataset.t;showT()});return}
- const[a,c]=await Promise.all([sb.from("torneo_parejas").select("id,jugador1,jugador2,grupo").eq("torneo_id",t.id),sb.from("torneo_partidos").select("*").eq("torneo_id",t.id).order("ronda").order("pos")]);
- const P=a.data||[],M=c.data||[],G=TV.grupos(t,P,M),LL=TV.llave(M,P),f=x=>new Date(x+"T12:00:00").toLocaleDateString("es-AR",{day:"numeric",month:"long"});
- box.innerHTML=`<div><button id="tb">Todos los torneos</button></div><h1>${esc(t.nombre)}</h1><p>${GL[t.genero]} · ${esc(t.categoria)} · ${TLAB[t.estado]}${t.fecha_inicio?" · desde el "+f(t.fecha_inicio):""}${t.fecha_fin?" hasta el "+f(t.fecha_fin):""}</p>
- ${t.reglas?`<div><h3>Reglas</h3><p style="white-space:pre-wrap;color:var(--t)">${esc(t.reglas)}</p></div>`:""}${TV.campeon(M,P)}
- ${G?`<h3>Fase de grupos</h3>${G}<p class="m">Victoria suma 2 puntos. La marca azul indica quiénes clasifican.</p>`:""}${LL?`<h3>Cruces</h3>${LL}`:""}${!G&&!LL?`<p>El fixture se publica cuando cierre la inscripción.</p>`:""}`;
- $("#tb").onclick=()=>{tsel=null;showT()}}
-setInterval(()=>{if(!$("#tn").hidden&&tsel)showT()},45000);
+ if(!TT.length){box.innerHTML=`<h2>Todavía no hay torneos</h2><p>Cuando abramos uno nuevo vas a poder inscribirte y seguirlo desde acá.</p>`;return}
+ if(!t){box.innerHTML=TT.map(x=>`<button class="tc ${x.estado}" data-t="${x.id}"><span class="ts ${x.estado}">${TLAB[x.estado]}</span><b>${esc(x.nombre)}</b><span class="m">${GL[x.genero]} · ${esc(x.categoria)}${x.fecha_inicio?" · desde el "+fl(x.fecha_inicio):""}</span></button>`).join("");
+  box.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tsel=b.dataset.t;showT()});return}
+ const[a,c]=await Promise.all([sb.from("torneo_parejas").select("id,jugador1,jugador2,grupo").eq("torneo_id",t.id).order("id"),sb.from("torneo_partidos").select("*").eq("torneo_id",t.id).order("ronda").order("pos")]);
+ const P=a.data||[],M=c.data||[],G=TV.grupos(t,P,M),LL=TV.llave(M,P),ins=t.estado==="inscripcion";
+ box.innerHTML=`<div><button id="tb">Todos los torneos</button></div><div style="display:grid;gap:6px"><span class="ts ${t.estado}">${TLAB[t.estado]}</span><h2>${esc(t.nombre)}</h2>
+ <p class="m">${GL[t.genero]} · ${esc(t.categoria)}${t.fecha_inicio?" · desde el "+fl(t.fecha_inicio):""}${t.fecha_fin?" hasta el "+fl(t.fecha_fin):""}</p></div>
+ ${ins?`<div class="ins"><div><b>Inscripción abierta</b><p>${P.length} de ${t.cant_parejas} parejas${t.inscripcion>0?" · "+money(t.inscripcion)+" por pareja":""}</p></div>${P.length<t.cant_parejas?`<button class="p" id="bi">Inscribir mi pareja</button>`:`<span class="ts">Cupos completos</span>`}</div>`:""}
+ ${t.reglas?`<div><h3>Reglas</h3><p style="white-space:pre-wrap">${esc(t.reglas)}</p></div>`:""}${TV.campeon(M,P)}
+ ${ins&&P.length?`<div><h3>Parejas inscriptas</h3><div class="pl">${P.map((p,i)=>`<div>${i+1}. ${esc(TV.nom(p))}</div>`).join("")}</div></div>`:""}
+ ${G?`<h3>Fase de grupos</h3>${G}<p class="m">Victoria suma 2 puntos. La marca verde indica quiénes clasifican.</p>`:""}${LL?`<h3>Cruces</h3>${LL}`:""}${!G&&!LL&&!ins?`<p>El fixture se publica muy pronto.</p>`:""}`;
+ $("#tb").onclick=()=>{tsel=null;showT()};if($("#bi"))$("#bi").onclick=()=>inscribir(t)}
+function inscribir(t){const d=$("#d");
+ d.innerHTML=`<h3>Inscribir pareja · ${esc(t.nombre)}</h3><p class="m">Dejá un WhatsApp para avisarte del fixture. Con el de un jugador alcanza.</p><form>
+ <input name="a" placeholder="Jugador 1: nombre y apellido" required><input name="ta" inputmode="tel" placeholder="WhatsApp del jugador 1" required>
+ <input name="b" placeholder="Jugador 2: nombre y apellido" required><input name="tb" inputmode="tel" placeholder="WhatsApp del jugador 2 (opcional)">
+ <span id="err"></span><button class="p">Confirmar inscripción</button><button type="button" data-x>Cancelar</button></form>`;
+ d.querySelector("[data-x]").onclick=()=>d.close();
+ d.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=e.target,btn=f.querySelector(".p");btn.disabled=true;btn.textContent="Inscribiendo…";
+  const{error}=await sb.rpc("inscribir_pareja",{p_torneo:t.id,p_j1:f.a.value,p_j2:f.b.value,p_tel1:f.ta.value,p_tel2:f.tb.value||null});
+  if(error){$("#err").textContent=error.message;btn.disabled=false;btn.textContent="Confirmar inscripción";return}
+  d.close();const msg=`Hola, inscribí a ${f.a.value} y ${f.b.value} en ${t.nombre}.`;
+  $("#tn").innerHTML=`<h2>¡Pareja inscripta!</h2><p>${esc(f.a.value)} y ${esc(f.b.value)} quedaron anotados en ${esc(t.nombre)}. La inscripción queda <b>pendiente de pago</b>${t.inscripcion>0?" ("+money(t.inscripcion)+")":""}: escribinos para coordinarlo.</p>
+  <a href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}"><button class="p" style="width:100%">Coordinar pago por WhatsApp</button></a><button onclick="showT()">Volver al torneo</button>`}
+ d.showModal()}
+setInterval(()=>{if(!$("#tn").hidden&&tsel&&!$("#d").open)showT()},45000);
 </script></body></html>

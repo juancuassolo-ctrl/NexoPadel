@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Gestión · Nexo Pádel</title>
+<link rel="icon" href="../assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -45,6 +46,7 @@ dialog form,.col{display:grid;gap:12px;margin-top:12px}label{display:grid;gap:6p
 .login{max-width:320px;margin:14vh auto;display:grid;gap:10px}.login h1{font-size:24px}
 @media(max-width:760px){body{display:block}aside{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px;border:0;border-bottom:1px solid var(--border)}.brand,.who{display:none}aside a{flex:none}main{padding:16px}}
 dialog{max-height:90vh;overflow:auto}
+#v .tv{--ta:#0a5cb5;--ts2:#eef5fc;--tg:#f1f4f7;--tpg:#0a3768;--tchamp:#eef5fc;--tchampt:#0a3768;--tlime:#0a3768}
 </style></head><body>
 <aside id="side"></aside><main id="v"></main><dialog id="d"></dialog>
 <script src="../config.js"></script>
@@ -63,20 +65,20 @@ const nz=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowe
 const nm=c=>`${c.nombre} ${c.apellido||""}`.trim(),saldo=r=>Math.max(0,r.precio-r.sena);
 const medios=(z)=>["efectivo","transferencia"].map(o=>`<option>${o}</option>`).join("")+(z?'<option value="">sin caja</option>':"");
 const ES=["reservado","senado","jugando","terminado","cobrado"],EL={reservado:"Reservado",senado:"Señado",jugando:"Jugando",terminado:"Terminado",cobrado:"Cobrado",cancelado:"Cancelado"};
-const CAT={sena:"Seña de turno",turno:"Cobro de turno",producto:"Venta de producto",compra_stock:"Compra de stock",gasto:"Gasto",insumos:"Insumos",sueldo:"Sueldo",retiro:"Retiro",otro:"Otro"};
+const CAT={sena:"Seña de turno",turno:"Cobro de turno",producto:"Venta de producto",compra_stock:"Compra de stock",inscripcion:"Inscripción a torneo",gasto:"Gasto",insumos:"Insumos",sueldo:"Sueldo",retiro:"Retiro",otro:"Otro"};
 const pill=e=>`<span class="pill ${e}">${EL[e]}</span>`;
 async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message);return null}return r}
 const NAV=[["agenda","Agenda"],["turnos","Turnos"],["clientes","Clientes"],["caja","Caja"],["stock","Stock"],["torneos","Torneos"],["ajustes","Ajustes"]];
 let CF,K=[],C=[],P=[],R=[],ST={tab:"agenda",dia:hoy(),est:"todos",q:""},who="";
 (async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session):login()})();
-function login(msg){$("#side").innerHTML="";$("#v").innerHTML=`<form class="login" id="lf"><h1>Nexo Pádel</h1><span class="sub">Gestión · acceso privado</span>
+function login(msg){$("#side").innerHTML="";$("#v").innerHTML=`<form class="login" id="lf"><img src="../assets/logo.png" alt="" width="72" height="72" style="border-radius:50%"><h1>Nexo Pádel</h1><span class="sub">Gestión · acceso privado</span>
  <input name="e" type="email" placeholder="Email" required><input name="p" type="password" placeholder="Contraseña" required><button class="p">Ingresar</button><span class="neg">${msg||""}</span></form>`;
  $("#lf").onsubmit=async e=>{e.preventDefault();const f=e.target,{error}=await sb.auth.signInWithPassword({email:f.e.value,password:f.p.value});error?login("Email o contraseña incorrectos."):location.reload()}}
 async function start(s){const{data:ok}=await sb.rpc("es_admin");if(!ok){await sb.auth.signOut();return login("Esta cuenta no tiene acceso.")}who=s.user.email;ST.tab=location.hash.slice(1)||"agenda";await load()}
 async function load(){const r=await Promise.all([q(sb.from("config").select("*").single()),q(sb.from("canchas").select("*").order("nombre")),q(sb.from("clientes_resumen").select("*").order("apellido")),q(sb.from("productos").select("*").eq("activo",true).order("nombre"))]);
  if(r.some(x=>!x))return;[CF,K,C,P]=r.map(x=>x.data);render()}
 async function render(){
- $("#side").innerHTML=`<div class="brand"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--accent)"/><path d="M3.5 8.5c5.5 0 9.5 4 9.5 11.5M20.5 15.5C15 15.5 11 11.5 11 4" stroke="#fff" fill="none" stroke-width="1.6"/></svg><div><b>${esc(CF.nombre)}</b><span>Gestión</span></div></div>`+
+ $("#side").innerHTML=`<div class="brand"><img src="../assets/logo.png" alt="" width="36" height="36" style="border-radius:50%;flex:none"><div><b>${esc(CF.nombre)}</b><span>Gestión</span></div></div>`+
   NAV.map(n=>`<a data-act="nav" data-id="${n[0]}" class="${ST.tab===n[0]?"on":""}">${n[1]}${n[0]==="stock"&&P.some(p=>p.stock<=p.stock_minimo)?`<i>${P.filter(p=>p.stock<=p.stock_minimo).length} bajo</i>`:""}</a>`).join("")+`<div class="who">${esc(who)}<br><button data-act="out">Salir</button></div>`;
  $("#v").innerHTML=await({agenda:vAgenda,turnos:vTurnos,clientes:vClientes,caja:vCaja,stock:vStock,torneos:vTorneos,ajustes:vAjustes})[ST.tab]()}
 const head=(t,s,x)=>`<div class="head"><div><h1>${t}</h1><div class="sub">${s||""}</div></div><div class="row">${x||""}</div></div>`;
@@ -213,9 +215,11 @@ async function vTorneos(){
  if(!t){ST.tid=null;return head("Torneos",TO.length+" cargados",`<button class="p" data-act="tnew">Nuevo torneo</button>`)+(TO.length?`<div class="w"><table><tr><th>Torneo</th><th>Formato</th><th>Estado</th><th>En el turnero</th><th></th></tr>${TO.map(x=>
   `<tr><td>${esc(x.nombre)}<small>${GEN[x.genero]} · ${esc(x.categoria)}</small></td><td>${fmtT(x)}<small>partidos al mejor de ${x.sets} sets</small></td><td><span class="pill ${TEP[x.estado]}">${TE[x.estado]}</span></td><td>${x.publico?"Visible":"Oculto"}</td>
   <td class="nw n"><button class="t" data-act="topen" data-id="${x.id}">Abrir</button><button class="t" data-act="tedit" data-id="${x.id}">Editar</button><button class="t d" data-act="tdel" data-id="${x.id}">Eliminar</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Todavía no hay torneos. Creá el primero con «Nuevo torneo».</div>`)}
- const[a,b]=await Promise.all([q(sb.from("torneo_parejas").select("*").eq("torneo_id",t.id).order("created_at")),q(sb.from("torneo_partidos").select("*").eq("torneo_id",t.id).order("ronda").order("pos"))]);TP=a?.data||[];TM=b?.data||[];
+ const[a,b]=await Promise.all([q(sb.from("torneo_parejas").select("*,c1:clientes!cliente1_id(telefono),c2:clientes!cliente2_id(telefono)").eq("torneo_id",t.id).order("created_at")),q(sb.from("torneo_partidos").select("*").eq("torneo_id",t.id).order("ronda").order("pos"))]);TP=a?.data||[];TM=b?.data||[];
  const tabs=[["par","Parejas ("+TP.length+" de "+t.cant_parejas+")"],...(t.grupos?[["gru","Grupos"]]:[]),["cru","Cruces"]];if(!tabs.some(x=>x[0]===ST.tt))ST.tt="par";
- const body=ST.tt==="par"?`<div class="row" style="margin-bottom:12px"><button data-act="pnew">Agregar pareja</button><button class="p" data-act="tsort">${TM.length?"Volver a sortear":"Sortear y generar fixture"}</button></div>`+(TP.length?`<div class="w"><table><tr><th>Pareja</th><th>Grupo</th><th></th></tr>${TP.map(p=>`<tr><td>${esc(TV.nom(p))}</td><td>${p.grupo?TV.L(p.grupo):"—"}</td><td class="nw n"><button class="t" data-act="ped" data-id="${p.id}">Editar</button><button class="t d" data-act="pdel" data-id="${p.id}">Quitar</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Cargá las parejas inscriptas y después sorteá el fixture.</div>`):
+ const body=ST.tt==="par"?`<p class="m" style="margin-bottom:12px">${TP.filter(p=>p.pago==="pagado").length} de ${TP.length} inscripciones pagadas · cobrado ${money(sum(TP.filter(p=>p.pago==="pagado"),p=>p.pago_monto))}${t.inscripcion?" · "+money(t.inscripcion)+" por pareja":""}</p><div class="row" style="margin-bottom:12px"><button data-act="pnew">Agregar pareja</button><button class="p" data-act="tsort">${TM.length?"Volver a sortear":"Sortear y generar fixture"}</button></div>`+(TP.length?`<div class="w"><table><tr><th>Pareja</th><th>Grupo</th><th>Inscripción</th><th></th></tr>${TP.map(p=>`<tr><td>${esc(TV.nom(p))}<small>${p.c1?.telefono?`<a href="${wa(p.c1.telefono,"Hola, te escribo por el torneo "+t.nombre)}" target="_blank">${p.c1.telefono}</a>`:"sin WhatsApp"}${p.c2?.telefono?" · "+p.c2.telefono:""}${p.origen==="web"?" · se anotó por la web":""}</small></td><td>${p.grupo?TV.L(p.grupo):"—"}</td>
+  <td>${p.pago==="pagado"?`<span class="pill cobrado">Pagada</span><small>${p.pago_metodo} · ${money(p.pago_monto)}</small>`:`<span class="pill reservado">Pendiente</span>`}</td>
+  <td class="nw n">${p.pago==="pagado"?`<button class="t" data-act="pdespago" data-id="${p.id}">Quitar pago</button>`:`<button class="t" data-act="ppago" data-id="${p.id}">Cobrar</button>`}<button class="t" data-act="ped" data-id="${p.id}">Editar</button><button class="t d" data-act="pdel" data-id="${p.id}">Quitar</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Cargá las parejas inscriptas y después sorteá el fixture.</div>`):
   ST.tt==="gru"?(TM.some(m=>m.fase==="grupo")?TV.grupos(t,TP,TM,true)+`<p class="m" style="margin-top:12px">Tocá un partido para cargar resultado, estado, fecha y cancha. Victoria = 2 puntos.</p>`:`<div class="empty">Sorteá el fixture desde la pestaña Parejas.</div>`):
   (TM.some(m=>m.fase==="llave")?(t.grupos?`<div class="row" style="margin-bottom:12px"><button class="p" data-act="tcomp">Completar cruces desde los grupos</button></div>`:"")+TV.campeon(TM,TP)+TV.llave(TM,TP,true):`<div class="empty">Sorteá el fixture desde la pestaña Parejas.</div>`);
  return head(esc(t.nombre),`${GEN[t.genero]} · ${esc(t.categoria)} · ${fmtT(t)}`,`<span class="pill ${TEP[t.estado]}">${TE[t.estado]}</span><button data-act="tback">Todos los torneos</button><button data-act="tedit" data-id="${t.id}">Editar</button><button class="d" data-act="tdel" data-id="${t.id}">Eliminar</button>`)+
@@ -223,18 +227,23 @@ async function vTorneos(){
 function tform(t){const v=(k,d)=>esc(t?.[k]??d),op=(o)=>`<option ${t?.categoria===o?"selected":""}>${o}</option>`;
  dlg(t?"Editar torneo":"Nuevo torneo",`<label>Nombre<input name="n" value="${v("nombre","")}" required></label><label>Género<select name="g">${Object.entries(GEN).map(([k,l])=>`<option value="${k}" ${t?.genero===k?"selected":""}>${l}</option>`).join("")}</select></label>
  <label>Categoría<select name="c"><optgroup label="Categorías">${CATS.map(op).join("")}</optgroup><optgroup label="Suma">${SUMAS.map(op).join("")}</optgroup></select></label>
- <label>Cantidad de parejas<input name="np" type="number" min="2" max="64" value="${v("cant_parejas",8)}"></label><label>Grupos (0 = eliminación directa)<input name="gr" type="number" min="0" max="16" value="${v("grupos",2)}"></label>
+ <label>Cantidad de parejas<input name="np" type="number" min="2" max="64" value="${v("cant_parejas",8)}"></label><label>Inscripción por pareja ($)<input name="ins" type="number" min="0" value="${v("inscripcion",0)}"></label><label>Grupos (0 = eliminación directa)<input name="gr" type="number" min="0" max="16" value="${v("grupos",2)}"></label>
  <label>Parejas que pasan por grupo<input name="cl" type="number" min="1" max="8" value="${v("clasifican",2)}"></label><label>Partidos al mejor de<select name="st">${[1,3,5].map(n=>`<option value="${n}" ${(t?.sets??3)===n?"selected":""}>${n} ${n===1?"set":"sets"}</option>`).join("")}</select></label>
  <label>Inicio<input name="fi" type="date" value="${v("fecha_inicio","")}"></label><label>Fin<input name="ff" type="date" value="${v("fecha_fin","")}"></label>
  <label>Estado<select name="e">${Object.entries(TE).map(([k,l])=>`<option value="${k}" ${(t?.estado||"borrador")===k?"selected":""}>${l}</option>`).join("")}</select></label>
  <label style="display:flex;gap:8px;align-items:center"><input name="pub" type="checkbox" style="width:auto;height:auto" ${t?.publico?"checked":""}>Mostrar en el turnero público</label>
  <label>Reglas y notas<textarea name="r" rows="4">${v("reglas","")}</textarea></label>`,async f=>{
-  const o={nombre:f.get("n").trim(),genero:f.get("g"),categoria:f.get("c"),cant_parejas:+f.get("np"),grupos:+f.get("gr"),clasifican:+f.get("cl"),sets:+f.get("st"),estado:f.get("e"),publico:f.get("pub")==="on",reglas:f.get("r").trim()||null,fecha_inicio:f.get("fi")||null,fecha_fin:f.get("ff")||null};
+  const o={nombre:f.get("n").trim(),genero:f.get("g"),categoria:f.get("c"),cant_parejas:+f.get("np"),grupos:+f.get("gr"),clasifican:+f.get("cl"),sets:+f.get("st"),inscripcion:+f.get("ins")||0,estado:f.get("e"),publico:f.get("pub")==="on",reglas:f.get("r").trim()||null,fecha_inicio:f.get("fi")||null,fecha_fin:f.get("ff")||null};
   if(o.grupos>0&&Math.floor(o.cant_parejas/o.grupos)<o.clasifican)return alert("Cada grupo tendría menos parejas que las que deben clasificar.");
   if((o.grupos?o.grupos*o.clasifican:o.cant_parejas)<2)return alert("Tiene que haber al menos 2 parejas en los cruces.");
   await done(t?sb.from("torneos").update(o).eq("id",t.id):sb.from("torneos").insert(o))})}
-function pform(p){dlg(p?"Editar pareja":"Nueva pareja",`<label>Jugador 1<input name="a" value="${esc(p?.jugador1||"")}" required></label><label>Jugador 2<input name="b" value="${esc(p?.jugador2||"")}" required></label>`,
- f=>{const o={jugador1:f.get("a").trim(),jugador2:f.get("b").trim()};done(p?sb.from("torneo_parejas").update(o).eq("id",p.id):sb.from("torneo_parejas").insert({...o,torneo_id:ST.tid}))})}
+async function cliFor(n,t){t=t.replace(/\D/g,"");if(!t)return null;const r=await q(sb.from("clientes").select("id").eq("telefono",t).maybeSingle());if(!r)return undefined;if(r.data)return r.data.id;
+ const[a,...b]=n.trim().split(/\s+/),i=await q(sb.from("clientes").insert({nombre:a,apellido:b.join(" "),telefono:t}).select("id").single());return i?i.data.id:undefined}
+function pform(p){dlg(p?"Editar pareja":"Nueva pareja",`<label>Jugador 1 (nombre y apellido)<input name="a" value="${esc(p?.jugador1||"")}" required></label><label>WhatsApp del jugador 1<input name="ta" inputmode="tel" value="${esc(p?.c1?.telefono||"")}" required></label>
+ <label>Jugador 2 (nombre y apellido)<input name="b" value="${esc(p?.jugador2||"")}" required></label><label>WhatsApp del jugador 2 (opcional)<input name="tb" inputmode="tel" value="${esc(p?.c2?.telefono||"")}"></label><p class="m">Los jugadores con WhatsApp se guardan solos en Clientes.</p>`,
+ async f=>{const ta=f.get("ta").replace(/\D/g,"");if(ta.length<8)return alert("Cargá un WhatsApp válido del jugador 1.");const tb=f.get("tb").replace(/\D/g,"");if(tb&&tb.length<8)return alert("El WhatsApp del jugador 2 no es válido.");
+  const c1=await cliFor(f.get("a"),ta);if(c1===undefined)return;const c2=await cliFor(f.get("b"),tb);if(c2===undefined)return;
+  const o={jugador1:f.get("a").trim(),jugador2:f.get("b").trim(),cliente1_id:c1,cliente2_id:c2};await done(p?sb.from("torneo_parejas").update(o).eq("id",p.id):sb.from("torneo_parejas").insert({...o,torneo_id:ST.tid}))})}
 const rr=ids=>{const a=[...ids];if(a.length%2)a.push(null);const n=a.length,out=[];for(let r=0;r<n-1;r++){for(let i=0;i<n/2;i++){const x=a[i],y=a[n-1-i];if(x&&y)out.push([r+1,x,y])}a.splice(1,0,a.pop())}return out};
 const COLS=["id","torneo_id","fase","grupo","ronda","pos","pareja_a","pareja_b","origen_a","origen_b","estado","ganador","sig_id","sig_lado"];
 function resolver(M){const g=id=>M.find(m=>m.id===id);M.filter(m=>m.fase==="llave"&&m.ronda===1&&m.estado!=="finalizado").forEach(m=>{const la=m.origen_a==="Libre",lb=m.origen_b==="Libre";if(la===lb)return;const w=la?m.pareja_b:m.pareja_a;if(!w)return;m.estado="finalizado";m.ganador=w;const n=g(m.sig_id);if(n)n["pareja_"+m.sig_lado]=w});return M}
@@ -275,4 +284,8 @@ Object.assign(ACT,{
  pnew:()=>{const t=byId(TO,ST.tid);if(TP.length>=t.cant_parejas)return alert("El cupo está completo ("+t.cant_parejas+"). Subí la cantidad de parejas en «Editar».");pform()},ped:b=>pform(byId(TP,b.dataset.id)),
  pdel:b=>confirm("¿Quitar la pareja?"+(TM.length?" Ya hay fixture armado: vas a tener que sortear de nuevo.":""))&&done(sb.from("torneo_parejas").delete().eq("id",b.dataset.id)),
  tsort:()=>sortear(byId(TO,ST.tid)),tcomp:()=>completar(byId(TO,ST.tid)),part:b=>partido(byId(TM,b.dataset.id))});
+Object.assign(ACT,{
+ ppago:b=>{const p=byId(TP,b.dataset.id),t=byId(TO,ST.tid);dlg("Cobrar inscripción · "+esc(TV.nom(p)),`<label>Monto<input name="m" type="number" min="0" value="${t.inscripcion}"></label><label>Medio<select name="md">${medios()}</select></label>`,
+  f=>done(sb.from("torneo_parejas").update({pago:"pagado",pago_metodo:f.get("md"),pago_monto:+f.get("m")||0}).eq("id",p.id)))},
+ pdespago:b=>done(sb.from("torneo_parejas").update({pago:"pendiente",pago_metodo:null,pago_monto:0}).eq("id",b.dataset.id))});
 </script></body></html>
