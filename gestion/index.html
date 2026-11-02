@@ -47,10 +47,16 @@ dialog form,.col{display:grid;gap:12px;margin-top:12px}label{display:grid;gap:6p
 @media(max-width:760px){body{display:block}aside{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px;border:0;border-bottom:1px solid var(--border)}.brand,.who{display:none}aside a{flex:none}main{padding:16px}}
 dialog{max-height:90vh;overflow:auto}
 #v .tv{--ta:#0a5cb5;--ts2:#eef5fc;--tg:#f1f4f7;--tpg:#0a3768;--tchamp:#eef5fc;--tchampt:#0a3768;--tlime:#0a3768}
+.nh{margin:16px 10px 4px;font-size:12px;color:var(--muted)}.pill.u-padel{background:var(--accent-soft);color:var(--accent-ink)}.pill.u-bar{background:#fff1e0;color:#8a4b08}
+.pv{display:grid;grid-template-columns:1fr 320px;gap:var(--gap);align-items:start;margin-bottom:var(--gap)}.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{height:auto;min-height:68px;text-align:left;padding:10px 12px;font-weight:500;line-height:18px}.tile:disabled{opacity:.45;cursor:not-allowed}.tile small,.tk small{display:block;color:var(--muted);font-size:12px;font-weight:400}.tk{position:sticky;top:16px;margin:0}
+.row>input[type=date]{width:auto}
+@media(max-width:900px){.pv{grid-template-columns:1fr}.tk{position:static}}
 </style></head><body>
 <aside id="side"></aside><main id="v"></main><dialog id="d"></dialog>
 <script src="../config.js"></script>
 <script src="../torneos.js"></script>
+<script src="../reportes.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const{SB_URL,SB_KEY}=window.CFG,sb=supabase.createClient(SB_URL,SB_KEY),$=s=>document.querySelector(s),TZ="America/Argentina/Cordoba";
@@ -65,11 +71,11 @@ const nz=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowe
 const nm=c=>`${c.nombre} ${c.apellido||""}`.trim(),saldo=r=>Math.max(0,r.precio-r.sena);
 const medios=(z)=>["efectivo","transferencia"].map(o=>`<option>${o}</option>`).join("")+(z?'<option value="">sin caja</option>':"");
 const ES=["reservado","senado","jugando","terminado","cobrado"],EL={reservado:"Reservado",senado:"Señado",jugando:"Jugando",terminado:"Terminado",cobrado:"Cobrado",cancelado:"Cancelado"};
-const CAT={sena:"Seña de turno",turno:"Cobro de turno",producto:"Venta de producto",compra_stock:"Compra de stock",inscripcion:"Inscripción a torneo",gasto:"Gasto",insumos:"Insumos",sueldo:"Sueldo",retiro:"Retiro",otro:"Otro"};
+const CAT=RP.CAT;
 const pill=e=>`<span class="pill ${e}">${EL[e]}</span>`;
 async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message);return null}return r}
-const NAV=[["agenda","Agenda"],["turnos","Turnos"],["clientes","Clientes"],["caja","Caja"],["stock","Stock"],["torneos","Torneos"],["ajustes","Ajustes"]];
-let CF,K=[],C=[],P=[],R=[],ST={tab:"agenda",dia:hoy(),est:"todos",q:""},who="";
+const NAV=[["-","Pádel"],["agenda","Agenda"],["turnos","Turnos"],["torneos","Torneos"],["-","Bar"],["bar","Venta del bar"],["-","Gestión"],["clientes","Clientes"],["caja","Caja"],["stock","Stock y catálogo"],["reportes","Reportes"],["ajustes","Ajustes"]];
+let CF,K=[],C=[],P=[],R=[],ST={tab:"agenda",dia:hoy(),est:"todos",q:"",cu:"total",su:"padel",ru:"total",rp:"mes",ra:hoy(),rdet:false,tk:[],bf:""},who="";
 (async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session):login()})();
 function login(msg){$("#side").innerHTML="";$("#v").innerHTML=`<form class="login" id="lf"><img src="../assets/logo.png" alt="" width="72" height="72" style="border-radius:50%"><h1>Nexo Pádel</h1><span class="sub">Gestión · acceso privado</span>
  <input name="e" type="email" placeholder="Email" required><input name="p" type="password" placeholder="Contraseña" required><button class="p">Ingresar</button><span class="neg">${msg||""}</span></form>`;
@@ -79,8 +85,8 @@ async function load(){const r=await Promise.all([q(sb.from("config").select("*")
  if(r.some(x=>!x))return;[CF,K,C,P]=r.map(x=>x.data);render()}
 async function render(){
  $("#side").innerHTML=`<div class="brand"><img src="../assets/logo.png" alt="" width="36" height="36" style="border-radius:50%;flex:none"><div><b>${esc(CF.nombre)}</b><span>Gestión</span></div></div>`+
-  NAV.map(n=>`<a data-act="nav" data-id="${n[0]}" class="${ST.tab===n[0]?"on":""}">${n[1]}${n[0]==="stock"&&P.some(p=>p.stock<=p.stock_minimo)?`<i>${P.filter(p=>p.stock<=p.stock_minimo).length} bajo</i>`:""}</a>`).join("")+`<div class="who">${esc(who)}<br><button data-act="out">Salir</button></div>`;
- $("#v").innerHTML=await({agenda:vAgenda,turnos:vTurnos,clientes:vClientes,caja:vCaja,stock:vStock,torneos:vTorneos,ajustes:vAjustes})[ST.tab]()}
+  NAV.map(n=>n[0]==="-"?`<div class="nh">${n[1]}</div>`:`<a data-act="nav" data-id="${n[0]}" class="${ST.tab===n[0]?"on":""}">${n[1]}${n[0]==="stock"&&low().length?`<i>${low().length} bajo</i>`:""}</a>`).join("")+`<div class="who">${esc(who)}<br><button data-act="out">Salir</button></div>`;
+ $("#v").innerHTML=await({agenda:vAgenda,turnos:vTurnos,clientes:vClientes,caja:vCaja,stock:vStock,bar:vBar,reportes:vReportes,torneos:vTorneos,ajustes:vAjustes})[ST.tab]()}
 const head=(t,s,x)=>`<div class="head"><div><h1>${t}</h1><div class="sub">${s||""}</div></div><div class="row">${x||""}</div></div>`;
 const dayNav=()=>`<button data-act="dia" data-id="0">Hoy</button><button data-act="dia" data-id="1">Mañana</button><input type="date" id="fd" value="${ST.dia}" aria-label="Día">`;
 const dLong=()=>new Date(ST.dia+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
@@ -117,25 +123,62 @@ const cliRows=()=>{const t=nz(ST.q),L=C.filter(c=>c.activo&&(!t||nz(nm(c)+c.tele
 async function vClientes(){const r=await q(sb.from("clientes_resumen").select("*").order("apellido"));if(r)C=r.data;const A=C.filter(c=>c.activo);
  return head("Clientes",A.length+" registrados · "+A.filter(c=>c.reservas>=4).length+" con 4 o más reservas",`<input type="search" id="sq" placeholder="Buscar nombre, teléfono, DNI" value="${esc(ST.q)}" style="width:260px"><button class="p" data-act="cli">Nuevo cliente</button>`)+`<div class="w" id="tb">${cliRows()}</div>`}
 
-/* ---------- CAJA ---------- */
-async function vCaja(){const[a,b,c]=await Promise.all([q(sb.from("movimientos_caja").select("*").eq("fecha",ST.dia).order("created_at")),q(sb.from("cierres_caja").select("*").eq("fecha",ST.dia).maybeSingle()),q(sb.from("cierres_caja").select("*").order("fecha",{ascending:false}).limit(7))]);
- const M=a?.data||[],ci=b?.data,H=c?.data||[],net=md=>sum(M.filter(x=>x.metodo_pago===md),x=>x.tipo==="ingreso"?x.monto:-x.monto);ST.ef=net("efectivo");ST.tr=net("transferencia");
- const df=n=>n===0?'<span class="pill pos">Cuadra</span>':`<span class="pill neg">${sgn(n)}</span>`;
- return head("Caja",dLong(),dayNav()+`<button data-act="mov">Registrar movimiento</button><button class="p" data-act="cierre">${ci?"Rehacer cierre":"Cerrar caja"}</button>`)+
- `<div class="kpi"><div><span>Efectivo esperado</span><b>${money(ST.ef)}</b><small>en el cajón</small></div><div><span>Transferencia esperada</span><b>${money(ST.tr)}</b><small>en la cuenta del negocio</small></div>
- <div><span>Total del día</span><b>${money(ST.ef+ST.tr)}</b><small>${M.length} movimientos</small></div>
- <div><span>Cierre</span><b style="font-size:16px">${ci?"Cerrada":"Abierta"}</b><small>${ci?"efectivo "+sgn(ci.dif_efectivo)+" · transf. "+sgn(ci.dif_transferencia):"sin cerrar"}</small></div></div>`+
- (ci?`<div class="card"><b>Cierre del día</b><div class="kv"><span>Efectivo contado</span><b>${money(ci.efectivo_contado)} ${df(ci.dif_efectivo)}</b><span>Transferencia verificada</span><b>${money(ci.transferencia_contada)} ${df(ci.dif_transferencia)}</b>${ci.notas?`<span>Notas</span><b>${esc(ci.notas)}</b>`:""}</div></div>`:"")+
- `<h2>Movimientos</h2>`+(M.length?`<div class="w"><table><tr><th>Concepto</th><th>Medio</th><th class="n">Monto</th><th></th></tr>${M.map(x=>`<tr><td>${CAT[x.categoria]||esc(x.categoria)}<small>${esc(x.descripcion&&x.descripcion!==CAT[x.categoria]?x.descripcion:"")}</small></td><td>${x.metodo_pago}</td><td class="n">${x.tipo==="egreso"?"−":""}${money(x.monto)}</td>
- <td class="n">${x.reserva_id||x.stock_id?"":`<button class="t d" data-act="delmov" data-id="${x.id}">Quitar</button>`}</td></tr>`).join("")}</table></div>`:`<div class="empty">Sin movimientos este día.</div>`)+
- `<h2>Últimos cierres</h2>`+(H.length?`<div class="w"><table><tr><th>Día</th><th class="n">Efectivo contado</th><th class="n">Diferencia</th><th class="n">Transferencia</th><th class="n">Diferencia</th></tr>${H.map(x=>`<tr><td>${fd(x.fecha+"T12:00:00")}</td><td class="n">${money(x.efectivo_contado)}</td><td class="n ${x.dif_efectivo?"neg":""}">${x.dif_efectivo?sgn(x.dif_efectivo):"—"}</td><td class="n">${money(x.transferencia_contada)}</td><td class="n ${x.dif_transferencia?"neg":""}">${x.dif_transferencia?sgn(x.dif_transferencia):"—"}</td></tr>`).join("")}</table></div>`:`<div class="empty">Todavía no cerraste ninguna caja.</div>`)}
+/* ---------- UNIDADES DE NEGOCIO ---------- */
+const UN=RP.UN,low=()=>P.filter(p=>p.tipo==="producto"&&p.stock<=p.stock_minimo);
+const seg=(k,o,cur)=>`<div class="tabs noprint">${o.map(([v,l])=>`<button data-act="seg" data-k="${k}" data-v="${v}" class="${cur===v?"on":""}">${l}</button>`).join("")}</div>`;
+let VHc=null,RPX=null;
+const pg=async f=>{let o=[],i=0;for(;;){const r=await q(f().range(i,i+999));if(!r)return o;o=o.concat(r.data);if(r.data.length<1000)return o;i+=1000}};
 
-/* ---------- STOCK ---------- */
-async function vStock(){const r=await q(sb.from("movimientos_stock").select("*,productos(nombre)").order("created_at",{ascending:false}).limit(12)),MV=r?.data||[],bajo=P.filter(p=>p.stock<=p.stock_minimo);
- return head("Stock",P.length+" productos · valor a precio de venta "+money(sum(P,p=>p.stock*p.precio_venta)),`<button class="p" data-act="prod">Nuevo producto</button>`)+(bajo.length?`<div class="empty" style="margin-bottom:16px">${bajo.length} con stock bajo: ${bajo.map(p=>esc(p.nombre)).join(", ")}</div>`:"")+
- (P.length?`<div class="w"><table><tr><th>Producto</th><th class="n">Stock</th><th class="n">Mínimo</th><th class="n">Precio</th><th></th></tr>${P.map(p=>`<tr><td>${esc(p.nombre)}</td><td class="n">${p.stock} ${p.stock<=p.stock_minimo?'<span class="pill jugando">Bajo</span>':""}</td><td class="n">${p.stock_minimo}</td><td class="n">${money(p.precio_venta)}</td>
- <td class="nw n"><button class="t" data-act="vender" data-id="${p.id}">Vender</button><button class="t" data-act="compra" data-id="${p.id}">Ingresar</button><button class="t" data-act="ajuste" data-id="${p.id}">Ajustar</button><button class="t d" data-act="delprod" data-id="${p.id}">Quitar</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Cargá tus productos (pelotas, grips, bebidas…) con «Nuevo producto».</div>`)+
- `<h2>Últimos movimientos</h2>`+(MV.length?`<div class="w"><table><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="n">Cantidad</th><th class="n">Monto</th><th></th></tr>${MV.map(x=>`<tr><td>${fd(x.fecha+"T12:00:00")}</td><td>${esc(x.productos?.nombre)}</td><td>${{entrada:"Compra",venta:"Venta",ajuste:"Ajuste"}[x.tipo]}${x.metodo_pago?`<small>${x.metodo_pago}</small>`:""}</td><td class="n">${x.cantidad}</td><td class="n">${x.monto?money(x.monto):"—"}</td><td class="n"><button class="t d" data-act="delmv" data-id="${x.id}">Anular</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Sin movimientos.</div>`)}
+/* ---------- CAJA ---------- */
+async function vCaja(){const u=ST.cu,fu=x=>u==="total"?x:x.eq("unidad",u);
+ const[a,b,c]=await Promise.all([q(fu(sb.from("movimientos_caja").select("*").eq("fecha",ST.dia)).order("created_at")),q(fu(sb.from("cierres_caja").select("*").eq("fecha",ST.dia))),q(fu(sb.from("cierres_caja").select("*")).order("fecha",{ascending:false}).limit(u==="total"?14:7))]);
+ const M=a?.data||[],CI=b?.data||[],H=c?.data||[],net=f=>sum(M.filter(f),x=>x.tipo==="ingreso"?x.monto:-x.monto);
+ ST.ef=net(x=>x.metodo_pago==="efectivo");ST.tr=net(x=>x.metodo_pago==="transferencia");const ci=u==="total"?null:CI[0],T=u==="total",df=n=>n===0?'<span class="pill pos">Cuadra</span>':`<span class="pill neg">${sgn(n)}</span>`;
+ return head("Caja",dLong()+(T?"":" · "+UN[u]),dayNav()+`<button data-act="mov">Registrar movimiento</button>`+(T?"":`<button class="p" data-act="cierre">${ci?"Rehacer cierre":"Cerrar caja"}</button>`))+seg("cu",[["total","Pádel + Bar"],["padel","Pádel"],["bar","Bar"]],u)+
+ `<div class="kpi"><div><span>Efectivo esperado</span><b>${money(ST.ef)}</b><small>en el cajón</small></div><div><span>Transferencia esperada</span><b>${money(ST.tr)}</b><small>en la cuenta del negocio</small></div>
+ <div><span>Total del día</span><b>${money(ST.ef+ST.tr)}</b><small>${T?"Pádel "+money(net(x=>x.unidad==="padel"))+" · Bar "+money(net(x=>x.unidad==="bar")):M.length+" movimientos"}</small></div>
+ <div><span>${T?"Cierres":"Cierre"}</span><b style="font-size:16px">${T?["padel","bar"].map(k=>UN[k]+" "+(CI.some(x=>x.unidad===k)?"cerrada":"abierta")).join("<br>"):ci?"Cerrada":"Abierta"}</b><small>${ci?"efectivo "+sgn(ci.dif_efectivo)+" · transf. "+sgn(ci.dif_transferencia):"&nbsp;"}</small></div></div>`+
+ (ci?`<div class="card"><b>Cierre del día · ${UN[u]}</b><div class="kv"><span>Efectivo contado</span><b>${money(ci.efectivo_contado)} ${df(ci.dif_efectivo)}</b><span>Transferencia verificada</span><b>${money(ci.transferencia_contada)} ${df(ci.dif_transferencia)}</b>${ci.notas?`<span>Notas</span><b>${esc(ci.notas)}</b>`:""}</div></div>`:"")+
+ `<h2>Movimientos</h2>`+(M.length?`<div class="w"><table><tr><th>Concepto</th>${T?"<th>Unidad</th>":""}<th>Medio</th><th class="n">Monto</th><th></th></tr>${M.map(x=>`<tr><td>${CAT[x.categoria]||esc(x.categoria)}<small>${esc(x.descripcion&&x.descripcion!==CAT[x.categoria]?x.descripcion:"")}</small></td>${T?`<td>${upill(x.unidad)}</td>`:""}<td>${x.metodo_pago}</td><td class="n">${x.tipo==="egreso"?"−":""}${money(x.monto)}</td>
+ <td class="n">${x.reserva_id||x.stock_id||x.pareja_id?"":`<button class="t d" data-act="delmov" data-id="${x.id}">Quitar</button>`}</td></tr>`).join("")}</table></div>`:`<div class="empty">Sin movimientos este día.</div>`)+
+ `<h2>Últimos cierres</h2>`+(H.length?`<div class="w"><table><tr><th>Día</th>${T?"<th>Unidad</th>":""}<th class="n">Efectivo contado</th><th class="n">Diferencia</th><th class="n">Transferencia</th><th class="n">Diferencia</th></tr>${H.map(x=>`<tr><td>${fd(x.fecha+"T12:00:00")}</td>${T?`<td>${upill(x.unidad)}</td>`:""}<td class="n">${money(x.efectivo_contado)}</td><td class="n ${x.dif_efectivo?"neg":""}">${x.dif_efectivo?sgn(x.dif_efectivo):"—"}</td><td class="n">${money(x.transferencia_contada)}</td><td class="n ${x.dif_transferencia?"neg":""}">${x.dif_transferencia?sgn(x.dif_transferencia):"—"}</td></tr>`).join("")}</table></div>`:`<div class="empty">Todavía no cerraste ninguna caja.</div>`)}
+const upill=u=>`<span class="pill u-${u}">${UN[u]}</span>`;
+
+/* ---------- STOCK Y CATÁLOGO ---------- */
+async function vStock(){const u=ST.su,r=await q(sb.from("movimientos_stock").select("*,productos!inner(nombre,unidad,tipo)").eq("productos.unidad",u).order("created_at",{ascending:false}).limit(12)),MV=r?.data||[],PL=P.filter(p=>p.unidad===u),bajo=low().filter(p=>p.unidad===u);
+ return head("Stock y catálogo",`${UN[u]} · ${PL.length} ítems · stock valorizado al costo ${money(sum(PL.filter(p=>p.tipo==="producto"),p=>p.stock*p.costo))}`,`<button class="p" data-act="prod">Nuevo producto o servicio</button>`)+seg("su",[["padel","Pádel"],["bar","Bar"]],u)+
+ (bajo.length?`<div class="empty" style="margin-bottom:16px">${bajo.length} con stock bajo: ${bajo.map(p=>esc(p.nombre)).join(", ")}</div>`:"")+
+ (PL.length?`<div class="w"><table><tr><th>Producto o servicio</th><th>Tipo</th><th class="n">Stock</th><th class="n">Costo</th><th class="n">Precio</th><th class="n">Margen</th><th></th></tr>${PL.map(p=>{const pr=p.tipo==="producto";return`<tr><td>${esc(p.nombre)}${p.rubro?`<small>${esc(p.rubro)}</small>`:""}</td><td>${pr?"Producto":"Servicio"}</td><td class="n">${pr?p.stock+(p.stock<=p.stock_minimo?' <span class="pill jugando">Bajo</span>':""):"—"}</td><td class="n">${money(p.costo)}</td><td class="n">${money(p.precio_venta)}</td><td class="n">${p.precio_venta?Math.round((p.precio_venta-p.costo)/p.precio_venta*100)+"%":"—"}</td>
+ <td class="nw n"><button class="t" data-act="vender" data-id="${p.id}">Vender</button>${pr?`<button class="t" data-act="compra" data-id="${p.id}">Ingresar</button><button class="t" data-act="ajuste" data-id="${p.id}">Ajustar</button>`:""}<button class="t" data-act="pedit" data-id="${p.id}">Editar</button><button class="t d" data-act="delprod" data-id="${p.id}">Quitar</button></td></tr>`}).join("")}</table></div>`:`<div class="empty">Cargá los productos y servicios de ${UN[u]} con «Nuevo producto o servicio».</div>`)+
+ `<h2>Últimos movimientos</h2>`+(MV.length?`<div class="w"><table><tr><th>Fecha</th><th>Ítem</th><th>Tipo</th><th class="n">Cantidad</th><th class="n">Monto</th><th></th></tr>${MV.map(x=>`<tr><td>${fd(x.fecha+"T12:00:00")}</td><td>${esc(x.productos?.nombre)}</td><td>${{entrada:"Compra",venta:"Venta",ajuste:"Ajuste"}[x.tipo]}${x.metodo_pago?`<small>${x.metodo_pago}</small>`:""}</td><td class="n">${x.cantidad}</td><td class="n">${x.monto?money(x.monto):"—"}</td><td class="n"><button class="t d" data-act="delmv" data-id="${x.id}">Anular</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Sin movimientos.</div>`)}
+
+/* ---------- VENTA DEL BAR ---------- */
+async function vBar(){ST.tk=ST.tk.filter(l=>byId(P,l.id));const PL=P.filter(p=>p.unidad==="bar"),rub=[...new Set(PL.map(p=>p.rubro||"Otros"))].sort(),L=PL.filter(p=>!ST.bf||(p.rubro||"Otros")===ST.bf);
+ if(!VHc){const r=await q(sb.from("movimientos_stock").select("*,productos!inner(nombre,unidad)").eq("productos.unidad","bar").eq("tipo","venta").eq("fecha",hoy()).order("created_at",{ascending:false}));VHc=r?.data||[]}
+ const tot=sum(ST.tk,l=>l.n*byId(P,l.id).precio_venta),vend=sum(VHc,x=>x.monto),tks=new Set(VHc.map(x=>x.ticket||x.id)).size;
+ return head("Venta del bar","Ventas de hoy · solo Bar",`<button data-act="mov" data-u="bar">Gasto o ingreso del bar</button>`)+
+ `<div class="kpi"><div><span>Vendido hoy</span><b>${money(vend)}</b><small>${tks} tickets</small></div><div><span>Ticket promedio</span><b>${money(tks?vend/tks:0)}</b><small>&nbsp;</small></div><div><span>En el ticket actual</span><b>${money(tot)}</b><small>${sum(ST.tk,l=>l.n)} ítems</small></div></div>`+
+ (PL.length?`<div class="pv"><div>${rub.length>1?`<div class="tabs"><button data-act="rubf" data-v="" class="${ST.bf?"":"on"}">Todos</button>${rub.map(x=>`<button data-act="rubf" data-v="${esc(x)}" class="${ST.bf===x?"on":""}">${esc(x)}</button>`).join("")}</div>`:""}
+ <div class="tiles">${L.map(p=>{const off=p.tipo==="producto"&&p.stock<=0;return`<button class="tile" data-act="tadd" data-id="${p.id}" ${off?"disabled":""}>${esc(p.nombre)}<small>${money(p.precio_venta)}${p.tipo==="producto"?" · stock "+p.stock:" · servicio"}</small></button>`}).join("")}</div></div>
+ <div class="card tk"><b>Ticket</b>${ST.tk.length?ST.tk.map(l=>{const p=byId(P,l.id);return`<div class="row" style="justify-content:space-between;margin-top:8px"><span>${esc(p.nombre)}<small>${money(p.precio_venta)} c/u</small></span><span class="row"><button data-act="tdec" data-id="${l.id}" aria-label="Quitar uno">−</button><b>${l.n}</b><button data-act="tinc" data-id="${l.id}" aria-label="Agregar uno">+</button></span></div>`}).join("")+
+ `<div class="row" style="justify-content:space-between;margin:16px 0 8px"><span>Total</span><b style="font-size:24px">${money(tot)}</b></div><div class="col"><button class="p" data-act="tpay" data-m="efectivo">Cobrar en efectivo</button><button class="p" data-act="tpay" data-m="transferencia">Cobrar por transferencia</button><button data-act="tclr">Vaciar</button></div>`:`<p class="m" style="margin-top:8px">Tocá un producto para agregarlo.</p>`}</div></div>`
+ :`<div class="empty">Todavía no hay productos del bar. Andá a Stock y catálogo, elegí «Bar» y creá productos o servicios.</div>`)+
+ `<h2>Ventas de hoy</h2>`+(VHc.length?`<div class="w"><table><tr><th>Hora</th><th>Ítem</th><th class="n">Cant.</th><th class="n">Monto</th><th>Medio</th><th></th></tr>${VHc.map(x=>`<tr><td>${hh(x.created_at)}</td><td>${esc(x.productos?.nombre)}</td><td class="n">${x.cantidad}</td><td class="n">${money(x.monto)}</td><td>${x.metodo_pago||"—"}</td><td class="n"><button class="t d" data-act="delmv" data-id="${x.id}">Anular</button></td></tr>`).join("")}</table></div>`:`<div class="empty">Todavía no hay ventas hoy.</div>`)}
+
+/* ---------- REPORTES ---------- */
+async function vReportes(){const u=ST.ru,per=ST.rp;ST.rd1=ST.rd1||RP.periodo("mes",hoy()).a;ST.rd2=ST.rd2||hoy();const pr=RP.periodo(per,ST.ra,ST.rd1,ST.rd2),fu=x=>u==="total"?x:x.eq("unidad",u);
+ const[M,Mp,V,R,CI,nv]=await Promise.all([
+  pg(()=>fu(sb.from("movimientos_caja").select("*").gte("fecha",pr.a).lte("fecha",pr.b)).order("fecha").order("created_at")),
+  pg(()=>fu(sb.from("movimientos_caja").select("*").gte("fecha",pr.pa).lte("fecha",pr.pb)).order("fecha")),
+  pg(()=>{let x=sb.from("movimientos_stock").select("*,productos!inner(nombre,unidad,tipo,costo,rubro)").eq("tipo","venta").gte("fecha",pr.a).lte("fecha",pr.b);if(u!=="total")x=x.eq("productos.unidad",u);return x.order("created_at")}),
+  u==="bar"?[]:pg(()=>sb.from("reservas").select("inicio,estado,origen,precio,cancha_id").gte("inicio",pr.a+"T00:00:00-03:00").lte("inicio",pr.b+"T23:59:59-03:00").order("inicio")),
+  pg(()=>fu(sb.from("cierres_caja").select("*").gte("fecha",pr.a).lte("fecha",pr.b)).order("fecha")),
+  u==="bar"?0:sb.from("clientes").select("id",{count:"exact",head:true}).gte("created_at",pr.a+"T00:00:00-03:00").lte("created_at",pr.b+"T23:59:59-03:00").then(r=>r.count||0)]);
+ RPX={u,pr,M,Mp,V,R,CI,K,CF,P,nuevos:nv,detalle:ST.rdet,logo:"../assets/logo.png",nombre:CF.nombre};
+ return head("Reportes","Análisis por unidad de negocio",`<button data-act="rprint">Imprimir o guardar PDF</button><button data-act="rshare">Compartir</button><button class="p" data-act="rcsv">Descargar CSV</button>`)+
+ `<div class="noprint">${seg("ru",[["total","Pádel + Bar"],["padel","Pádel"],["bar","Bar"]],u)}${seg("rp",[["dia","Día"],["semana","Semana"],["mes","Mes"],["rango","Rango"]],per)}
+ <div class="row" style="margin-bottom:16px">${per==="rango"?`<input type="date" id="rd1" value="${ST.rd1}" aria-label="Desde"><span>a</span><input type="date" id="rd2" value="${ST.rd2}" aria-label="Hasta">`:`<button data-act="rnav" data-id="-1" aria-label="Anterior">◀</button><input type="date" id="ra" value="${ST.ra}" aria-label="Fecha"><button data-act="rnav" data-id="1" aria-label="Siguiente">▶</button>`}
+ <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="rdet" style="width:auto;height:auto" ${ST.rdet?"checked":""}>Incluir detalle de movimientos</label></div></div><div class="rep">${RP.html(RPX)}</div>`}
 
 /* ---------- AJUSTES ---------- */
 function vAjustes(){return head("Ajustes","Horarios, precio y canchas")+`<div class="card"><h3>Horarios y precio</h3><form id="cf" class="col"><label>Nombre del complejo<input name="nombre" value="${esc(CF.nombre)}"></label>
@@ -178,21 +221,6 @@ const ACT={
    const o={nombre:f.get("n").trim(),apellido:f.get("a").trim(),telefono:f.get("t").replace(/\D/g,""),email:f.get("e").trim()||null,dni:f.get("d").trim()||null,notas:f.get("o").trim()||null};if(o.telefono.length<8)return alert("Teléfono inválido");
    done(c?sb.from("clientes").update(o).eq("id",c.id):sb.from("clientes").insert(o)).then(()=>{ST.tab==="clientes"&&render()})});
   c&&sb.from("reservas").select("inicio,estado,precio,canchas(nombre)").eq("cliente_id",c.id).order("inicio",{ascending:false}).limit(6).then(({data})=>{d.querySelector("#hist").innerHTML=data?.length?`<div class="m" style="margin-bottom:4px">Últimas reservas</div>`+data.map(x=>`<div class="row" style="justify-content:space-between"><span>${fd(x.inicio)} · ${hh(x.inicio)} · ${esc(x.canchas.nombre)}</span>${pill(x.estado)}</div>`).join(""):""})},
- mov:()=>dlg("Registrar movimiento",`<label>Tipo<select name="tp"><option value="egreso">Egreso (gasto, retiro)</option><option value="ingreso">Ingreso</option></select></label><label>Categoría<select name="ct">${["gasto","insumos","sueldo","retiro","otro"].map(o=>`<option value="${o}">${CAT[o]}</option>`).join("")}</select></label>
-  <label>Monto<input name="m" type="number" min="1" required></label><label>Medio<select name="md">${medios()}</select></label><label>Descripción<input name="d"></label>`,f=>done(sb.from("movimientos_caja").insert({fecha:ST.dia,tipo:f.get("tp"),categoria:f.get("ct"),monto:+f.get("m"),metodo_pago:f.get("md"),descripcion:f.get("d")}))),
- delmov:b=>confirm("¿Quitar este movimiento?")&&done(sb.from("movimientos_caja").delete().eq("id",b.dataset.id)),
- cierre:()=>dlg("Cerrar caja · "+ST.dia,`<div class="kv"><span>Efectivo esperado</span><b>${money(ST.ef)}</b><span>Transferencia esperada</span><b>${money(ST.tr)}</b></div><label>Efectivo contado en el cajón<input name="e" type="number" min="0" required></label>
-  <label>Transferencias verificadas en la cuenta<input name="t" type="number" min="0" required></label><label>Notas<input name="n"></label>`,f=>{const e=+f.get("e"),t=+f.get("t");
-  done(sb.from("cierres_caja").upsert({fecha:ST.dia,efectivo_esperado:ST.ef,transferencia_esperada:ST.tr,efectivo_contado:e,transferencia_contada:t,dif_efectivo:e-ST.ef,dif_transferencia:t-ST.tr,notas:f.get("n")||null}))}),
- prod:()=>dlg("Nuevo producto",`<label>Nombre<input name="n" required></label><label>Precio de venta<input name="p" type="number" min="0" required></label><label>Stock mínimo (aviso)<input name="m" type="number" min="0" value="2"></label>`,
-  f=>done(sb.from("productos").insert({nombre:f.get("n").trim(),precio_venta:+f.get("p"),stock_minimo:+f.get("m")||0}))),
- vender:b=>{const p=byId(P,b.dataset.id);dlg("Vender · "+esc(p.nombre),`<label>Cantidad<input name="c" type="number" min="1" value="1" required></label><label>Total cobrado (vacío = ${money(p.precio_venta)} × cantidad)<input name="m" type="number" min="0"></label><label>Medio<select name="md">${medios(1)}</select></label>`,f=>{
-  const c=+f.get("c");if(c>p.stock&&!confirm("Hay "+p.stock+" en stock. ¿Vender igual?"))return;done(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"venta",cantidad:c,monto:f.get("m")===""?c*p.precio_venta:+f.get("m"),metodo_pago:f.get("md")||null,fecha:hoy()}))})},
- compra:b=>{const p=byId(P,b.dataset.id);dlg("Ingresar stock · "+esc(p.nombre),`<label>Cantidad<input name="c" type="number" min="1" required></label><label>Costo total<input name="m" type="number" min="0" value="0"></label><label>Medio de pago<select name="md">${medios(1)}</select></label>`,
-  f=>done(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"entrada",cantidad:+f.get("c"),monto:+f.get("m")||0,metodo_pago:f.get("md")||null,fecha:hoy()})))},
- ajuste:b=>{const p=byId(P,b.dataset.id);dlg("Ajustar · "+esc(p.nombre),`<label>Cantidad a sumar o restar (ej: -2)<input name="c" type="number" required></label>`,f=>done(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"ajuste",cantidad:+f.get("c"),fecha:hoy()})))},
- delprod:b=>confirm("¿Quitar el producto del listado? El historial se conserva.")&&done(sb.from("productos").update({activo:false}).eq("id",b.dataset.id)).then(load),
- delmv:b=>confirm("Se revierte el stock y la caja de este movimiento. ¿Seguir?")&&done(sb.from("movimientos_stock").delete().eq("id",b.dataset.id)).then(load),
  ren:b=>{const k=byId(K,b.dataset.id),n=prompt("Nuevo nombre",k.nombre);n&&q(sb.from("canchas").update({nombre:n.trim()}).eq("id",k.id)).then(load)},
  tog:b=>{const k=byId(K,b.dataset.id);q(sb.from("canchas").update({activa:!k.activa}).eq("id",k.id)).then(load)},
  addk:()=>{const n=prompt("Nombre de la cancha");n&&q(sb.from("canchas").insert({nombre:n.trim()})).then(load)}};
@@ -288,4 +316,40 @@ Object.assign(ACT,{
  ppago:b=>{const p=byId(TP,b.dataset.id),t=byId(TO,ST.tid);dlg("Cobrar inscripción · "+esc(TV.nom(p)),`<label>Monto<input name="m" type="number" min="0" value="${t.inscripcion}"></label><label>Medio<select name="md">${medios()}</select></label>`,
   f=>done(sb.from("torneo_parejas").update({pago:"pagado",pago_metodo:f.get("md"),pago_monto:+f.get("m")||0}).eq("id",p.id)))},
  pdespago:b=>done(sb.from("torneo_parejas").update({pago:"pendiente",pago_metodo:null,pago_monto:0}).eq("id",b.dataset.id))});
+
+function prodForm(p){const ru=[...new Set(P.map(x=>x.rubro).filter(Boolean))];
+ dlg(p?"Editar · "+esc(p.nombre):"Nuevo producto o servicio",`<datalist id="rl">${ru.map(x=>`<option value="${esc(x)}">`).join("")}</datalist><label>Nombre<input name="n" value="${esc(p?.nombre||"")}" required></label>
+ ${p?"":`<label>Unidad de negocio<select name="u"><option value="padel" ${ST.su==="padel"?"selected":""}>Pádel</option><option value="bar" ${ST.su==="bar"?"selected":""}>Bar</option></select></label><label>Tipo<select name="t"><option value="producto">Producto (con stock)</option><option value="servicio">Servicio (sin stock)</option></select></label>`}
+ <label>Rubro (ej: Bebidas, Comidas)<input name="r" list="rl" value="${esc(p?.rubro||"")}"></label><label>Precio de venta<input name="p" type="number" min="0" value="${p?.precio_venta??""}" required></label>
+ <label>Costo por unidad<input name="c" type="number" min="0" value="${p?.costo??0}"></label><label>Stock mínimo (aviso)<input name="m" type="number" min="0" value="${p?.stock_minimo??2}"></label>`,
+ f=>{const o={nombre:f.get("n").trim(),rubro:f.get("r").trim()||null,precio_venta:+f.get("p"),costo:+f.get("c")||0,stock_minimo:+f.get("m")||0};
+  done(p?sb.from("productos").update(o).eq("id",p.id):sb.from("productos").insert({...o,unidad:f.get("u"),tipo:f.get("t")})).then(load)})}
+Object.assign(ACT,{
+ seg:b=>{ST[b.dataset.k]=b.dataset.v;render()},rubf:b=>{ST.bf=b.dataset.v;render()},rnav:b=>{ST.ra=RP.nav(ST.rp,ST.ra,+b.dataset.id);render()},
+ rprint:()=>window.print(),
+ rshare:async()=>{if(!RPX)return;const t=RP.texto(RPX);if(navigator.share){try{await navigator.share({title:"Reporte de "+UN[RPX.u],text:t});return}catch(e){if(e.name==="AbortError")return}}window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank")},
+ rcsv:()=>{if(!RPX)return;const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+RP.csv(RPX.M)],{type:"text/csv;charset=utf-8"}));a.download=`movimientos-${RPX.u}-${RPX.pr.a}_${RPX.pr.b}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)},
+ tadd:b=>{const p=byId(P,b.dataset.id),l=ST.tk.find(x=>x.id===p.id);if(p.tipo==="producto"&&(l?l.n:0)+1>p.stock)return alert("No hay más stock de "+p.nombre);l?l.n++:ST.tk.push({id:p.id,n:1});render()},
+ tinc:b=>ACT.tadd(b),tdec:b=>{const l=ST.tk.find(x=>x.id===b.dataset.id);l.n--;if(l.n<=0)ST.tk=ST.tk.filter(x=>x!==l);render()},tclr:()=>{ST.tk=[];render()},
+ tpay:async b=>{if(!ST.tk.length)return;const tid=crypto.randomUUID(),rows=ST.tk.map(l=>{const p=byId(P,l.id);return{producto_id:p.id,tipo:"venta",cantidad:l.n,monto:l.n*p.precio_venta,metodo_pago:b.dataset.m,fecha:hoy(),ticket:tid}});
+  if(await q(sb.from("movimientos_stock").insert(rows))){ST.tk=[];VHc=null;await load()}},
+ mov:b=>{const EG=["mercaderia","insumos","sueldo","alquiler","servicios_pub","impuestos","mantenimiento","marketing","gasto","retiro","otro"],IG=["evento","sponsor","otro"],op=l=>l.map(o=>`<option value="${o}">${CAT[o]}</option>`).join(""),u0=b?.dataset?.u||(ST.cu==="bar"?"bar":"padel");
+  dlg("Registrar movimiento",`<label>Unidad de negocio<select name="un"><option value="padel" ${u0==="padel"?"selected":""}>Pádel</option><option value="bar" ${u0==="bar"?"selected":""}>Bar</option></select></label>
+  <label>Tipo<select name="tp"><option value="egreso">Egreso (gasto, retiro)</option><option value="ingreso">Ingreso</option></select></label><label>Categoría<select name="ct">${op(EG)}</select></label>
+  <label>Monto<input name="m" type="number" min="1" required></label><label>Medio<select name="md">${medios()}</select></label><label>Fecha<input name="f" type="date" value="${ST.dia}" required></label><label>Descripción<input name="d"></label>`,
+  f=>{VHc=null;done(sb.from("movimientos_caja").insert({unidad:f.get("un"),fecha:f.get("f"),tipo:f.get("tp"),categoria:f.get("ct"),monto:+f.get("m"),metodo_pago:f.get("md"),descripcion:f.get("d")||null}))},fm=>{fm.tp.onchange=()=>{fm.ct.innerHTML=op(fm.tp.value==="egreso"?EG:IG)}})},
+ delmov:b=>confirm("¿Quitar este movimiento?")&&done(sb.from("movimientos_caja").delete().eq("id",b.dataset.id)),
+ cierre:()=>{const u=ST.cu;if(u==="total")return alert("Elegí Pádel o Bar para cerrar su caja.");
+  dlg("Cerrar caja · "+UN[u]+" · "+ST.dia,`<div class="kv"><span>Efectivo esperado</span><b>${money(ST.ef)}</b><span>Transferencia esperada</span><b>${money(ST.tr)}</b></div><label>Efectivo contado en el cajón<input name="e" type="number" min="0" required></label>
+  <label>Transferencias verificadas en la cuenta<input name="t" type="number" min="0" required></label><label>Notas<input name="n"></label>`,f=>{const e=+f.get("e"),t=+f.get("t");
+  done(sb.from("cierres_caja").upsert({fecha:ST.dia,unidad:u,efectivo_esperado:ST.ef,transferencia_esperada:ST.tr,efectivo_contado:e,transferencia_contada:t,dif_efectivo:e-ST.ef,dif_transferencia:t-ST.tr,notas:f.get("n")||null}))})},
+ prod:()=>prodForm(),pedit:b=>prodForm(byId(P,b.dataset.id)),
+ vender:b=>{const p=byId(P,b.dataset.id);dlg("Vender · "+esc(p.nombre)+" ("+UN[p.unidad]+")",`<label>Cantidad<input name="c" type="number" min="1" value="1" required></label><label>Total cobrado (vacío = ${money(p.precio_venta)} × cantidad)<input name="m" type="number" min="0"></label><label>Medio<select name="md">${medios()}</select></label>`,f=>{
+  const c=+f.get("c");if(p.tipo==="producto"&&c>p.stock&&!confirm("Hay "+p.stock+" en stock. ¿Vender igual?"))return;VHc=null;done(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"venta",cantidad:c,monto:f.get("m")===""?c*p.precio_venta:+f.get("m"),metodo_pago:f.get("md"),fecha:hoy()})).then(load)})},
+ compra:b=>{const p=byId(P,b.dataset.id);dlg("Ingresar stock · "+esc(p.nombre),`<label>Cantidad<input name="c" type="number" min="1" required></label><label>Costo total<input name="m" type="number" min="0" value="0"></label><label>Medio de pago<select name="md">${medios(1)}</select></label>`,
+  f=>done(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"entrada",cantidad:+f.get("c"),monto:+f.get("m")||0,metodo_pago:f.get("md")||null,fecha:hoy()})).then(load))},
+ ajuste:b=>{const p=byId(P,b.dataset.id);dlg("Ajustar · "+esc(p.nombre),`<label>Cantidad a sumar o restar (ej: -2)<input name="c" type="number" required></label>`,f=>done(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"ajuste",cantidad:+f.get("c"),fecha:hoy()})).then(load))},
+ delprod:b=>confirm("¿Quitar del listado? El historial se conserva.")&&done(sb.from("productos").update({activo:false}).eq("id",b.dataset.id)).then(load),
+ delmv:b=>{if(confirm("Se revierte el stock y la caja de este movimiento. ¿Seguir?")){VHc=null;done(sb.from("movimientos_stock").delete().eq("id",b.dataset.id)).then(load)}}});
+document.addEventListener("change",e=>{const i=e.target.id;if(["ra","rd1","rd2"].includes(i)&&e.target.value){ST[i]=e.target.value;render()}if(i==="rdet"){ST.rdet=e.target.checked;render()}});
 </script></body></html>
